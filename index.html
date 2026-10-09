@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>特務雷達 | 即時補給與戰術導航</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #0B1B3D; /* 深海戰術藍 */
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* 70% 上半部：Leaflet 地圖區 */
+    #map-zone {
+      height: 70%;
+      width: 100%;
+      border-bottom: 3px solid #FF6B00; /* 亮橘色高對比分隔線 */
+    }
+
+    /* 30% 下半部：戰術儀表板 */
+    #dashboard-zone {
+      height: 30%;
+      width: 100%;
+      background-color: #050a15; /* 極黑深藍，對比清晰 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      cursor: pointer;
+    }
+
+    /* 預設狀態 UI */
+    .default-ui {
+      text-align: center;
+      color: #ffffff;
+      font-size: 1.6rem;
+      font-weight: bold;
+    }
+    .highlight {
+      color: #FF6B00;
+      font-size: 2.2rem;
+      display: block;
+      margin-top: 5px;
+    }
+    .hint {
+      color: #FF6B00;
+      font-size: 1rem;
+      margin-top: 10px;
+      animation: pulse-text 1.8s infinite;
+    }
+
+    /* 倒數鎖定 UI */
+    .countdown-ui {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 爆發級巨型數字 */
+    .number-display {
+      color: #FF6B00;
+      font-size: 7rem;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 0 30px rgba(255, 107, 0, 0.8);
+    }
+
+    /* 心跳脈衝動畫 */
+    .heartbeat-pulse {
+      animation: heartbeat 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    /* 取消鎖定按鈕 */
+    .btn-cancel {
+      margin-top: 6px;
+      padding: 6px 20px;
+      background-color: #ff3333;
+      color: #ffffff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: 2px solid #ffffff;
+      border-radius: 30px;
+      box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+      cursor: pointer;
+    }
+
+    @keyframes heartbeat {
+      0% { transform: scale(0.7); opacity: 0.6; }
+      20% { transform: scale(1.25); opacity: 1; text-shadow: 0 0 50px rgba(255, 107, 0, 1); }
+      40% { transform: scale(0.95); opacity: 0.9; }
+      100% { transform: scale(0.7); opacity: 0.6; }
+    }
+
+    @keyframes pulse-text {
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 上方 70% 地圖區 -->
+  <div id="map-zone"></div>
+
+  <!-- 下方 30% 戰術儀表板 -->
+  <div id="dashboard-zone" onclick="handleDashboardClick(event)">
+    
+    <!-- 預設狀態 -->
+    <div id="default-ui" class="default-ui">
+      即時距離計算中...<br>
+      <span id="distance-text" class="highlight">連線中...</span>
+      <div class="hint">▼ 點擊儀表板 啟動戰術鎖定 ▼</div>
+    </div>
+
+    <!-- 倒數狀態 -->
+    <div id="countdown-ui" class="countdown-ui">
+      <div id="number-display" class="number-display">3</div>
+      <button class="btn-cancel" onclick="cancelLockdown(event)">✖ 取消鎖定</button>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Firebase SDK (Modular v10 / CDN 引入方式) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // TODO: 請替換成你自己的 Firebase 專案設定
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 區分身份（測試時你可以開兩個不同的瀏覽器分頁，一個設為 userA，另一個手動改成 userB）
+    const userId = "userA"; 
+    const friendId = "userB";
+
+    // 初始化 Leaflet 地圖 (預設置中於高雄)
+    const map = L.map('map-zone').setView([22.6273, 120.3014], 15);
+
+    // 使用標準 OpenStreetMap 圖層
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let myMarker = null;
+    let friendMarker = null;
+    let supplyMarker = null;
+    let currentDistance = 0;
+
+    // 假設的私房美食補給站座標 (例如鳳山附近)
+    const supplyPoint = { lat: 22.6310, lng: 120.3550, name: "特務私房美食補給站" };
+
+    // 放置補給站標記
+    supplyMarker = L.marker([supplyPoint.lat, supplyPoint.lng]).addTo(map)
+      .bindPopup(`<b>${supplyPoint.name}</b>`);
+
+    // 1. 取得手機真實 GPS 座標並寫入 Firebase
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition((position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        // 將自己的座標即時同步到 Firebase Realtime Database
+        set(ref(db, `locations/${userId}`), {
+          lat: lat,
+          lng: lng,
+          timestamp: Date.now()
+        });
+
+        // 更新自己的地圖標記
+        if (!myMarker) {
+          myMarker = L.marker([lat, lng]).addTo(map).bindPopup("我的位置");
+        } else {
+          myMarker.setLatLng([lat, lng]);
+        }
+      }, (error) => {
+        console.error("GPS 取得失敗: ", error);
+        alert("無法取得 GPS 定位，請確認手機定位權限已開啟。");
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 5000
+      });
+    } else {
+      alert("您的瀏覽器不支援地理定位功能 (Geolocation)。");
+    }
+
+    // 2. 從 Firebase 即時監聽朋友的位置
+    onValue(ref(db, `locations/${friendId}`), (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const fLat = data.lat;
+        const fLng = data.lng;
+
+        if (!friendMarker) {
+          friendMarker = L.marker([fLat, fLng]).addTo(map).bindPopup("朋友位置");
+        } else {
+          friendMarker.setLatLng([fLat, fLng]);
+        }
+
+        // 如果雙方都有座標，計算距離
+        if (myMarker) {
+          const myLatLng = myMarker.getLatLng();
+          const friendLatLng = L.latLng(fLat, fLng);
+          currentDistance = Math.round(myLatLng.distanceTo(friendLatLng)); // 單位：公尺
+
+          // 更新下方戰術面板文字
+          document.getElementById('distance-text').textContent = `${currentDistance} 公尺`;
+        }
+      }
+    });
+
+    // 3. 戰術鎖定與 3 秒倒數邏輯
+    let countdownTimer = null;
+    let secondsLeft = 3;
+    let isCounting = false;
+
+    window.handleDashboardClick = function(event) {
+      if (isCounting) return;
+      startCountdown();
+    };
+
+    function startCountdown() {
+      isCounting = true;
+      secondsLeft = 3;
+
+      document.getElementById('default-ui').style.display = 'none';
+      const countdownUI = document.getElementById('countdown-ui');
+      countdownUI.style.display = 'flex';
+
+      updateNumberDisplay(secondsLeft);
+
+      countdownTimer = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft > 0) {
+          updateNumberDisplay(secondsLeft);
+        } else {
+          clearInterval(countdownTimer);
+          const numDisplay = document.getElementById('number-display');
+          numDisplay.textContent = "GO!";
+          numDisplay.style.fontSize = "5rem";
+
+          setTimeout(() => {
+            launchNavigation();
+            resetToDefault();
+          }, 400);
+        }
+      }, 1000);
+    }
+
+    function updateNumberDisplay(num) {
+      const numDisplay = document.getElementById('number-display');
+      numDisplay.textContent = num;
+      numDisplay.style.fontSize = "7rem";
+      numDisplay.classList.remove('heartbeat-pulse');
+      void numDisplay.offsetWidth; // 觸發重繪
+      numDisplay.classList.add('heartbeat-pulse');
+    }
+
+    window.cancelLockdown = function(event) {
+      event.stopPropagation();
+      if (countdownTimer) clearInterval(countdownTimer);
+      resetToDefault();
+    };
+
+    function resetToDefault() {
+      isCounting = false;
+      if (countdownTimer) clearInterval(countdownTimer);
+
+      document.getElementById('default-ui').style.display = 'block';
+      document.getElementById('countdown-ui').style.display = 'none';
+
+      const numDisplay = document.getElementById('number-display');
+      numDisplay.classList.remove('heartbeat-pulse');
+    }
+
+    function launchNavigation() {
+      // 導航前往私房美食補給站
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${supplyPoint.lat},${supplyPoint.lng}`;
+      window.open(mapsUrl, '_blank');
+    }
+  </script>
+</body>
+</html>
