@@ -43,23 +43,31 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
+  /* 頂部導覽列優化：自動換行、防止擠壓 */
   #topbar{
-    position:absolute;top:0;left:0;right:0;z-index:1000;display:flex;gap:10px;align-items:center;
+    position:absolute;top:0;left:0;right:0;z-index:1000;
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
     padding:12px;padding-top:calc(12px + env(safe-area-inset-top));
+    pointer-events:none; /* 避免空白區域阻擋地圖滑動 */
   }
+  #topbar > * { pointer-events:auto; }
   .chip{
-    background:#000;color:#fff;border-radius:8px;padding:12px 16px;font-size:16px;font-weight:bold;
+    background:#000;color:#fff;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:bold;
     display:flex;gap:8px;align-items:center;
-    border:2px solid #555;white-space:nowrap;max-width:46vw;overflow:hidden;
+    border:2px solid #555;white-space:nowrap; 
+    /* 移除了強制縮水的 max-width 與 overflow:hidden */
   }
   .chip .lbl{color:#aaa;}
-  .chip b{color:#ffeb3b;font-size:18px;overflow:hidden;text-overflow:ellipsis;}
-  #topbar .spacer{flex:1}
+  .chip b{color:#ffeb3b;font-size:18px;}
+  
+  #copyBtn{margin-left:auto;} /* 將按鈕推至右側 */
   #topbar button{
     background:#000;color:#fff;border:2px solid #555;font-weight:bold;
-    border-radius:8px;padding:12px 16px;font-size:16px;cursor:pointer;
+    border-radius:8px;padding:10px 14px;font-size:16px;cursor:pointer;
+    white-space:nowrap; /* 確保按鈕文字不會因為空間小而斷行 */
   }
   #leaveBtn{color:#ff5252;border-color:#ff5252;}
+  
   #netDot{width:12px;height:12px;border-radius:50%;background:#ff3d00;transition:.3s}
   #netDot.on{background:#00e676;box-shadow:0 0 10px #00e676}
 
@@ -158,7 +166,7 @@
   <div id="topbar">
     <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
     <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
-    <div class="spacer"></div>
+    <!-- 移除了原本的 spacer，改用 CSS 控制按鈕靠右排列 -->
     <button id="copyBtn">🔗 邀請</button>
     <button id="leaveBtn">離開</button>
   </div>
