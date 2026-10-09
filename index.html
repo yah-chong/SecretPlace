@@ -1,313 +1,593 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>特務雷達 | 即時補給與戰術導航</title>
-  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
-  <style>
-    * { box-sizing: border-box; }
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      background-color: #0B1B3D; /* 深海戰術藍 */
-      overflow: hidden;
-      user-select: none;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>揪團定位 · 活動代號地圖</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;overflow:hidden}
+  .screen{position:fixed;inset:0}
+  .hidden{display:none!important}
 
-    /* 70% 上半部：Leaflet 地圖區 */
-    #map-zone {
-      height: 70%;
-      width: 100%;
-      border-bottom: 3px solid #FF6B00; /* 亮橘色高對比分隔線 */
-    }
+  /* ---------- 加入畫面 ---------- */
+  #joinScreen{
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(120% 120% at 50% 0%,#1e3a8a 0%,#0f172a 55%,#020617 100%);
+    color:#fff;overflow-y:auto;
+  }
+  .card{
+    width:100%;max-width:400px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);
+    border-radius:22px;padding:28px 22px;box-shadow:0 24px 60px rgba(0,0,0,.5);
+  }
+  .card h1{margin:0 0 8px;font-size:24px;letter-spacing:.5px}
+  .sub{margin:0 0 22px;font-size:13px;color:#9fb0c8;line-height:1.7}
+  label{display:block;font-size:12px;color:#9fb0c8;margin:16px 0 6px;letter-spacing:.6px}
+  input{
+    width:100%;padding:13px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.08);color:#fff;font-size:16px;outline:none;transition:.2s;
+  }
+  input:focus{border-color:#60a5fa;background:rgba(96,165,250,.14)}
+  input::placeholder{color:#64748b}
+  button.primary{
+    width:100%;margin-top:24px;padding:15px;border:0;border-radius:13px;font-size:16px;font-weight:800;
+    background:linear-gradient(135deg,#34d399,#10b981);color:#04231a;cursor:pointer;
+    box-shadow:0 10px 24px rgba(16,185,129,.35);transition:.15s;
+  }
+  button.primary:active{transform:scale(.98)}
+  .hint{font-size:11px;color:#64748b;text-align:center;margin:14px 0 0;line-height:1.7}
 
-    /* 30% 下半部：戰術儀表板 */
-    #dashboard-zone {
-      height: 30%;
-      width: 100%;
-      background-color: #050a15; /* 極黑深藍，對比清晰 */
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      cursor: pointer;
-    }
+  /* ---------- 地圖畫面 ---------- */
+  #mapScreen{background:#0b1220}
+  #map{position:absolute;inset:0;background:#0b1220}
 
-    /* 預設狀態 UI */
-    .default-ui {
-      text-align: center;
-      color: #ffffff;
-      font-size: 1.6rem;
-      font-weight: bold;
-    }
-    .highlight {
-      color: #FF6B00;
-      font-size: 2.2rem;
-      display: block;
-      margin-top: 5px;
-    }
-    .hint {
-      color: #FF6B00;
-      font-size: 1rem;
-      margin-top: 10px;
-      animation: pulse-text 1.8s infinite;
-    }
+  #topbar{
+    position:absolute;top:0;left:0;right:0;z-index:1000;display:flex;gap:8px;align-items:center;
+    padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));
+  }
+  .chip{
+    background:rgba(15,23,42,.86);color:#e2e8f0;border-radius:999px;padding:7px 13px;font-size:12px;
+    display:flex;gap:6px;align-items:center;backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.1);white-space:nowrap;max-width:46vw;overflow:hidden;
+  }
+  .chip .lbl{color:#94a3b8}
+  .chip b{color:#34d399;font-size:13px;overflow:hidden;text-overflow:ellipsis}
+  #topbar .spacer{flex:1}
+  #topbar button{
+    background:rgba(15,23,42,.86);color:#e2e8f0;border:1px solid rgba(255,255,255,.1);
+    border-radius:999px;padding:8px 13px;font-size:12px;cursor:pointer;backdrop-filter:blur(10px);
+  }
+  #leaveBtn{color:#fca5a5}
+  #netDot{width:7px;height:7px;border-radius:50%;background:#f59e0b;transition:.3s}
+  #netDot.on{background:#34d399;box-shadow:0 0 8px #34d399}
 
-    /* 倒數鎖定 UI */
-    .countdown-ui {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-    }
+  #locBtn{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:1000;
+    width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.15);
+    background:rgba(15,23,42,.9);color:#e2e8f0;font-size:20px;cursor:pointer;
+    backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.4);
+  }
+  #locBtn:active{transform:translateY(-50%) scale(.94)}
 
-    /* 爆發級巨型數字 */
-    .number-display {
-      color: #FF6B00;
-      font-size: 7rem;
-      font-weight: 900;
-      line-height: 1;
-      text-shadow: 0 0 30px rgba(255, 107, 0, 0.8);
-    }
+  #panel{
+    position:absolute;left:0;right:0;bottom:0;z-index:1000;
+    background:rgba(15,23,42,.95);backdrop-filter:blur(16px);
+    border-top-left-radius:20px;border-top-right-radius:20px;
+    border-top:1px solid rgba(255,255,255,.1);
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+    max-height:46vh;display:flex;flex-direction:column;
+  }
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:#94a3b8;padding:2px 6px 9px;letter-spacing:.5px;
+  }
+  #peerList{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .peer{
+    display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:13px;
+    background:rgba(255,255,255,.055);margin-bottom:7px;cursor:pointer;transition:.15s;
+  }
+  .peer:active{background:rgba(255,255,255,.14)}
+  .pdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+  .pinfo{flex:1;min-width:0}
+  .pname{color:#e2e8f0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pmeta{color:#94a3b8;font-size:11px;margin-top:3px}
+  .navbtn{
+    background:#10b981;color:#04231a;text-decoration:none;font-size:12px;font-weight:800;
+    padding:8px 13px;border-radius:10px;flex:0 0 auto;
+  }
+  .empty{color:#64748b;font-size:12px;padding:16px 6px;text-align:center;line-height:1.8}
 
-    /* 心跳脈衝動畫 */
-    .heartbeat-pulse {
-      animation: heartbeat 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-    }
+  /* 地圖標記 */
+  .pin{position:absolute;left:0;top:0}
+  .pin .dot{
+    position:absolute;left:-9px;top:-9px;width:18px;height:18px;border-radius:50%;
+    border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45);
+  }
+  .pin .name{
+    position:absolute;left:0;top:15px;transform:translateX(-50%);
+    font-size:12px;font-weight:700;color:#fff;background:rgba(15,23,42,.88);
+    padding:2px 9px;border-radius:10px;white-space:nowrap;border:1px solid rgba(255,255,255,.14);
+  }
+  .pin.me .dot{box-shadow:0 0 0 4px rgba(255,255,255,.85),0 0 0 11px rgba(52,211,153,.35)}
+  .leaflet-tooltip.lineTip{
+    background:rgba(15,23,42,.92);color:#fff;border:0;font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:9px;box-shadow:0 4px 12px rgba(0,0,0,.4);
+  }
+  .leaflet-tooltip.lineTip::before{display:none}
 
-    /* 取消鎖定按鈕 */
-    .btn-cancel {
-      margin-top: 6px;
-      padding: 6px 20px;
-      background-color: #ff3333;
-      color: #ffffff;
-      font-size: 1.1rem;
-      font-weight: bold;
-      border: 2px solid #ffffff;
-      border-radius: 30px;
-      box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
-      cursor: pointer;
-    }
-
-    @keyframes heartbeat {
-      0% { transform: scale(0.7); opacity: 0.6; }
-      20% { transform: scale(1.25); opacity: 1; text-shadow: 0 0 50px rgba(255, 107, 0, 1); }
-      40% { transform: scale(0.95); opacity: 0.9; }
-      100% { transform: scale(0.7); opacity: 0.6; }
-    }
-
-    @keyframes pulse-text {
-      0% { opacity: 0.3; }
-      50% { opacity: 1; }
-      100% { opacity: 0.3; }
-    }
-  </style>
+  #loading{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1200;
+    background:rgba(15,23,42,.92);color:#e2e8f0;padding:14px 22px;border-radius:14px;
+    font-size:13px;text-align:center;line-height:1.7;border:1px solid rgba(255,255,255,.12);
+    max-width:80vw;
+  }
+  #toast{
+    position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);z-index:3000;
+    background:rgba(15,23,42,.96);color:#fff;padding:11px 18px;border-radius:12px;
+    font-size:13px;opacity:0;transition:.25s;pointer-events:none;
+    border:1px solid rgba(255,255,255,.12);max-width:86vw;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
 </head>
 <body>
 
-  <!-- 上方 70% 地圖區 -->
-  <div id="map-zone"></div>
+<!-- ============ 1. 加入畫面 ============ -->
+<div id="joinScreen" class="screen">
+  <div class="card">
+    <h1>📍 揪團定位</h1>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此的位置、距離，並一鍵導航。</p>
 
-  <!-- 下方 30% 戰術儀表板 -->
-  <div id="dashboard-zone" onclick="handleDashboardClick(event)">
-    
-    <!-- 預設狀態 -->
-    <div id="default-ui" class="default-ui">
-      即時距離計算中...<br>
-      <span id="distance-text" class="highlight">連線中...</span>
-      <div class="hint">▼ 點擊儀表板 啟動戰術鎖定 ▼</div>
-    </div>
+    <label>活動代號（由發起人命名）</label>
+    <input id="codeInput" placeholder="例如：2025 家族旅遊" maxlength="30" autocomplete="off">
 
-    <!-- 倒數狀態 -->
-    <div id="countdown-ui" class="countdown-ui">
-      <div id="number-display" class="number-display">3</div>
-      <button class="btn-cancel" onclick="cancelLockdown(event)">✖ 取消鎖定</button>
-    </div>
+    <label>你的暱稱 / 姓名</label>
+    <input id="nickInput" placeholder="例如：小明" maxlength="12" autocomplete="off">
 
+    <button id="joinBtn" class="primary">開始分享位置</button>
+    <p class="hint">按下後瀏覽器會詢問 GPS 定位權限，請選擇「允許」。<br>位置僅在相同活動代號的同伴之間同步。</p>
+  </div>
+</div>
+
+<!-- ============ 2. 地圖畫面 ============ -->
+<div id="mapScreen" class="screen hidden">
+  <div id="map"></div>
+
+  <div id="topbar">
+    <div class="chip"><span class="lbl">活動</span><b id="topCode">—</b></div>
+    <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
+    <div class="spacer"></div>
+    <button id="copyBtn">🔗 邀請</button>
+    <button id="leaveBtn">離開</button>
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
-  <!-- Firebase SDK (Modular v10 / CDN 引入方式) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  <button id="locBtn" title="回到我的位置">◎</button>
 
-    // TODO: 請替換成你自己的 Firebase 專案設定
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  <div id="panel">
+    <div class="panel-head"><span>同伴列表（點一下可在地圖上標示距離）</span></div>
+    <div id="peerList"></div>
+  </div>
 
-    // 初始化 Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+  <div id="loading">正在取得 GPS 定位…<br><span style="font-size:11px;color:#94a3b8">請允許瀏覽器的定位權限</span></div>
+</div>
 
-    // 區分身份（測試時你可以開兩個不同的瀏覽器分頁，一個設為 userA，另一個手動改成 userB）
-    const userId = "userA"; 
-    const friendId = "userB";
+<div id="toast"></div>
 
-    // 初始化 Leaflet 地圖 (預設置中於高雄)
-    const map = L.map('map-zone').setView([22.6273, 120.3014], 15);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+(function () {
+  'use strict';
 
-    // 使用標準 OpenStreetMap 圖層
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  /* ================= 常數與狀態 ================= */
+  const COLORS = ['#ff5252','#448aff','#ffb300','#00c853','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
+  const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   // 公開 MQTT over WebSocket
+  const TOPIC_PREFIX = 'geoact/v1/';
+  const STALE_MS = 90 * 1000;   // 超過 90 秒沒更新 → 視為離線
+  const PING_MS  = 15 * 1000;   // 每 15 秒廣播一次自己的位置
+
+  const state = {
+    id: 'u' + Math.random().toString(36).slice(2, 10),
+    code: '', nickname: '', color: COLORS[0], topic: '',
+    myPos: null, map: null, meMarker: null, line: null,
+    client: null, watchId: null, firstFix: false, joined: false
+  };
+  const peers = new Map();   // id -> {id, nickname, color, lat, lng, ts, marker}
+
+  const $ = s => document.querySelector(s);
+
+  /* ================= 工具函式 ================= */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function toast(msg, ms) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), ms || 2600);
+  }
+  function hashColor(id) {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return COLORS[h % COLORS.length];
+  }
+  function haversine(a, b) {                       // 公尺
+    const R = 6371000, rad = d => d * Math.PI / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const s = Math.sin(dLat / 2) ** 2 +
+              Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+  function fmtDist(m) {
+    if (m == null) return '距離未知';
+    if (m < 1000) return Math.round(m) + ' 公尺';
+    return (m / 1000).toFixed(m < 10000 ? 2 : 1) + ' 公里';
+  }
+  function ago(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 10) return '剛剛';
+    if (s < 60) return s + ' 秒前';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + ' 分鐘前';
+    return Math.floor(m / 60) + ' 小時前';
+  }
+
+  /* ================= 地圖 ================= */
+  function ensureMap(latlng) {
+    if (state.map) return;
+    state.map = L.map('map', { zoomControl: false, attributionControl: true }).setView(latlng, 17);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(state.map);
+    peers.forEach(p => addPeerMarker(p));     // 補上已收到的同伴標記
+  }
 
-    let myMarker = null;
-    let friendMarker = null;
-    let supplyMarker = null;
-    let currentDistance = 0;
+  function iconFor(nickname, color, isMe) {
+    return L.divIcon({
+      className: '',
+      html:
+        '<div class="pin' + (isMe ? ' me' : '') + '">' +
+          '<div class="dot" style="background:' + color + '"></div>' +
+          '<div class="name">' + esc(nickname) + '</div>' +
+        '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+  }
 
-    // 假設的私房美食補給站座標 (例如鳳山附近)
-    const supplyPoint = { lat: 22.6310, lng: 120.3550, name: "特務私房美食補給站" };
-
-    // 放置補給站標記
-    supplyMarker = L.marker([supplyPoint.lat, supplyPoint.lng]).addTo(map)
-      .bindPopup(`<b>${supplyPoint.name}</b>`);
-
-    // 1. 取得手機真實 GPS 座標並寫入 Firebase
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition((position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        // 將自己的座標即時同步到 Firebase Realtime Database
-        set(ref(db, `locations/${userId}`), {
-          lat: lat,
-          lng: lng,
-          timestamp: Date.now()
-        });
-
-        // 更新自己的地圖標記
-        if (!myMarker) {
-          myMarker = L.marker([lat, lng]).addTo(map).bindPopup("我的位置");
-        } else {
-          myMarker.setLatLng([lat, lng]);
-        }
-      }, (error) => {
-        console.error("GPS 取得失敗: ", error);
-        alert("無法取得 GPS 定位，請確認手機定位權限已開啟。");
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 5000
-      });
+  function updateMeMarker() {
+    if (!state.map || !state.myPos) return;
+    const ll = [state.myPos.lat, state.myPos.lng];
+    if (!state.meMarker) {
+      state.meMarker = L.marker(ll, {
+        icon: iconFor(state.nickname, '#10b981', true),
+        zIndexOffset: 1000,
+        interactive: false
+      }).addTo(state.map);
     } else {
-      alert("您的瀏覽器不支援地理定位功能 (Geolocation)。");
+      state.meMarker.setLatLng(ll);
+    }
+  }
+
+  function addPeerMarker(p) {
+    if (!state.map || p.marker) return;
+    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false) })
+      .addTo(state.map)
+      .on('click', () => focusPeer(p.id));
+  }
+
+  function clearLine() {
+    if (state.line && state.map) { state.map.removeLayer(state.line); }
+    state.line = null;
+  }
+
+  /* ================= 同伴管理 ================= */
+  function upsertPeer(m) {
+    let p = peers.get(m.id);
+    if (!p) {
+      p = {
+        id: m.id, nickname: m.nickname || '同伴',
+        color: hashColor(m.id),
+        lat: m.lat, lng: m.lng, ts: Date.now(), marker: null
+      };
+      peers.set(m.id, p);
+      addPeerMarker(p);
+    } else {
+      if (m.nickname && m.nickname !== p.nickname) {
+        p.nickname = m.nickname;
+        if (p.marker) p.marker.setIcon(iconFor(p.nickname, p.color, false));
+      }
+      p.lat = m.lat; p.lng = m.lng; p.ts = Date.now();
+      if (p.marker) p.marker.setLatLng([m.lat, m.lng]);
+    }
+    renderPeers();
+  }
+
+  function removePeer(id) {
+    const p = peers.get(id);
+    if (!p) return;
+    if (p.marker && state.map) state.map.removeLayer(p.marker);
+    peers.delete(id);
+    renderPeers();
+  }
+
+  function prunePeers() {
+    const now = Date.now();
+    let changed = false;
+    peers.forEach((p, id) => {
+      if (now - p.ts > STALE_MS) {
+        if (p.marker && state.map) state.map.removeLayer(p.marker);
+        peers.delete(id);
+        changed = true;
+      }
+    });
+    if (changed) renderPeers();
+  }
+
+  /* ================= 列表渲染 ================= */
+  function navUrl(p) {
+    const q = new URLSearchParams({
+      api: '1',
+      destination: p.lat + ',' + p.lng,
+      travelmode: 'walking'
+    });
+    if (state.myPos) q.set('origin', state.myPos.lat + ',' + state.myPos.lng);
+    return 'https://www.google.com/maps/dir/?' + q.toString();
+  }
+
+  function renderPeers() {
+    const el = $('#peerList');
+    const scrollTop = el.scrollTop;
+
+    $('#topCount').textContent = peers.size + 1;
+
+    const list = [...peers.values()].map(p => ({
+      ...p,
+      dist: state.myPos ? haversine(state.myPos, p) : null
+    })).sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
+
+    if (!list.length) {
+      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴，一起加入吧！</div>';
+      return;
     }
 
-    // 2. 從 Firebase 即時監聽朋友的位置
-    onValue(ref(db, `locations/${friendId}`), (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const fLat = data.lat;
-        const fLng = data.lng;
+    el.innerHTML = list.map(p => `
+      <div class="peer" onclick="focusPeer('${p.id}')">
+        <span class="pdot" style="background:${p.color}"></span>
+        <div class="pinfo">
+          <div class="pname">${esc(p.nickname)}</div>
+          <div class="pmeta">${fmtDist(p.dist)} · ${ago(p.ts)}</div>
+        </div>
+        <a class="navbtn" href="${navUrl(p)}" target="_blank" rel="noopener"
+           onclick="event.stopPropagation()">導航</a>
+      </div>`).join('');
 
-        if (!friendMarker) {
-          friendMarker = L.marker([fLat, fLng]).addTo(map).bindPopup("朋友位置");
-        } else {
-          friendMarker.setLatLng([fLat, fLng]);
-        }
+    el.scrollTop = scrollTop;
+  }
 
-        // 如果雙方都有座標，計算距離
-        if (myMarker) {
-          const myLatLng = myMarker.getLatLng();
-          const friendLatLng = L.latLng(fLat, fLng);
-          currentDistance = Math.round(myLatLng.distanceTo(friendLatLng)); // 單位：公尺
+  /* ================= 互動：聚焦同伴 ================= */
+  window.focusPeer = function (id) {
+    const p = peers.get(id);
+    if (!p || !state.map) return;
+    clearLine();
+    const target = [p.lat, p.lng];
 
-          // 更新下方戰術面板文字
-          document.getElementById('distance-text').textContent = `${currentDistance} 公尺`;
-        }
+    if (state.myPos) {
+      const mine = [state.myPos.lat, state.myPos.lng];
+      const d = haversine(state.myPos, p);
+      state.line = L.polyline([mine, target], {
+        color: p.color, weight: 3, dashArray: '7 9', opacity: .9
+      }).addTo(state.map)
+        .bindTooltip('距離 ' + fmtDist(d), {
+          permanent: true, direction: 'center', className: 'lineTip'
+        }).openTooltip();
+      state.map.fitBounds(L.latLngBounds([mine, target]).pad(0.35));
+    } else {
+      state.map.setView(target, 17);
+    }
+    if (p.marker) p.marker.openPopup();
+    toast('已標示與「' + p.nickname + '」的距離');
+  };
+
+  window.goMe = function () {
+    if (!state.myPos || !state.map) return toast('尚未取得定位');
+    clearLine();
+    state.map.setView([state.myPos.lat, state.myPos.lng], 17);
+  };
+
+  /* ================= MQTT 即時同步 ================= */
+  function send(type, extra) {
+    if (!state.client || !state.client.connected) return;
+    const msg = Object.assign({
+      type: type, id: state.id, nickname: state.nickname, ts: Date.now()
+    }, extra || {});
+    state.client.publish(state.topic, JSON.stringify(msg), { qos: 0 });
+  }
+  function sendPos() {
+    if (!state.myPos) return;
+    send('pos', { lat: state.myPos.lat, lng: state.myPos.lng, acc: state.myPos.acc });
+  }
+
+  function setNet(on) {
+    $('#netDot').classList.toggle('on', !!on);
+  }
+
+  function connectMQTT() {
+    if (typeof mqtt === 'undefined') {
+      toast('MQTT 函式庫載入失敗，請檢查網路後重新整理');
+      return;
+    }
+    state.client = mqtt.connect(BROKER, {
+      clientId: 'geoact_' + state.id,
+      clean: true,
+      keepalive: 30,
+      reconnectPeriod: 3000,
+      connectTimeout: 10000
+    });
+
+    state.client.on('connect', () => {
+      setNet(true);
+      state.client.subscribe(state.topic, { qos: 0 }, err => {
+        if (err) return;
+        send('hello');        // 通知大家我進來了
+        sendPos();            // 立刻公布我的位置
+      });
+    });
+
+    state.client.on('message', (topic, buf) => {
+      let m;
+      try { m = JSON.parse(buf.toString()); } catch (e) { return; }
+      if (!m || !m.id || m.id === state.id) return;
+
+      if (m.type === 'hello') { sendPos(); return; }          // 有人加入 → 回報位置
+      if (m.type === 'bye')   { removePeer(m.id); return; }   // 有人離開
+      if (m.type === 'pos' &&
+          typeof m.lat === 'number' && typeof m.lng === 'number') {
+        upsertPeer(m);
       }
     });
 
-    // 3. 戰術鎖定與 3 秒倒數邏輯
-    let countdownTimer = null;
-    let secondsLeft = 3;
-    let isCounting = false;
+    state.client.on('reconnect', () => setNet(false));
+    state.client.on('close',     () => setNet(false));
+    state.client.on('error',     () => setNet(false));
+  }
 
-    window.handleDashboardClick = function(event) {
-      if (isCounting) return;
-      startCountdown();
+  /* ================= GPS 定位 ================= */
+  function hideLoading() {
+    const el = $('#loading');
+    if (el) el.remove();
+  }
+
+  function onPos(pos) {
+    const c = pos.coords;
+    state.myPos = { lat: c.latitude, lng: c.longitude, acc: c.accuracy };
+    hideLoading();
+
+    if (!state.map) ensureMap([state.myPos.lat, state.myPos.lng]);
+    updateMeMarker();
+
+    if (!state.firstFix) {
+      state.firstFix = true;
+      state.map.setView([state.myPos.lat, state.myPos.lng], 17);
+    }
+    sendPos();
+    renderPeers();
+  }
+
+  function onPosErr(err) {
+    const map = {
+      1: '定位權限被拒絕。請到瀏覽器設定允許定位後重新整理。',
+      2: '目前無法取得定位訊號，請確認 GPS 已開啟。',
+      3: '取得定位逾時，請到空曠處再試一次。'
     };
-
-    function startCountdown() {
-      isCounting = true;
-      secondsLeft = 3;
-
-      document.getElementById('default-ui').style.display = 'none';
-      const countdownUI = document.getElementById('countdown-ui');
-      countdownUI.style.display = 'flex';
-
-      updateNumberDisplay(secondsLeft);
-
-      countdownTimer = setInterval(() => {
-        secondsLeft--;
-        if (secondsLeft > 0) {
-          updateNumberDisplay(secondsLeft);
-        } else {
-          clearInterval(countdownTimer);
-          const numDisplay = document.getElementById('number-display');
-          numDisplay.textContent = "GO!";
-          numDisplay.style.fontSize = "5rem";
-
-          setTimeout(() => {
-            launchNavigation();
-            resetToDefault();
-          }, 400);
-        }
-      }, 1000);
+    const el = $('#loading');
+    if (el) {
+      el.innerHTML = '<b style="color:#fca5a5">定位失敗</b><br>' +
+                     (map[err.code] || err.message) +
+                     '<br><span style="font-size:11px;color:#94a3b8">（必須使用 HTTPS 或 localhost 才能定位）</span>';
     }
+    toast(map[err.code] || '定位失敗');
+  }
 
-    function updateNumberDisplay(num) {
-      const numDisplay = document.getElementById('number-display');
-      numDisplay.textContent = num;
-      numDisplay.style.fontSize = "7rem";
-      numDisplay.classList.remove('heartbeat-pulse');
-      void numDisplay.offsetWidth; // 觸發重繪
-      numDisplay.classList.add('heartbeat-pulse');
+  function startGeo() {
+    if (!navigator.geolocation) {
+      toast('此瀏覽器不支援 GPS 定位');
+      return;
     }
+    state.watchId = navigator.geolocation.watchPosition(onPos, onPosErr, {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 20000
+    });
+  }
 
-    window.cancelLockdown = function(event) {
-      event.stopPropagation();
-      if (countdownTimer) clearInterval(countdownTimer);
-      resetToDefault();
-    };
+  /* ================= 加入 / 離開 ================= */
+  function join() {
+    const code = $('#codeInput').value.trim();
+    const nick = $('#nickInput').value.trim();
 
-    function resetToDefault() {
-      isCounting = false;
-      if (countdownTimer) clearInterval(countdownTimer);
+    if (!code) { toast('請輸入活動代號'); $('#codeInput').focus(); return; }
+    if (!nick) { toast('請輸入你的暱稱'); $('#nickInput').focus(); return; }
 
-      document.getElementById('default-ui').style.display = 'block';
-      document.getElementById('countdown-ui').style.display = 'none';
+    state.code = code;
+    state.nickname = nick;
+    // 主題名稱：只保留安全字元，避免 MQTT 主題格式問題
+    state.topic = TOPIC_PREFIX + code.replace(/[^\w\u4e00-\u9fa5-]/g, '_');
+    state.color = hashColor(state.id);
 
-      const numDisplay = document.getElementById('number-display');
-      numDisplay.classList.remove('heartbeat-pulse');
+    $('#topCode').textContent = code;
+    $('#joinScreen').classList.add('hidden');
+    $('#mapScreen').classList.remove('hidden');
+
+    state.joined = true;
+    startGeo();
+    connectMQTT();
+
+    // 若 5 秒後仍無定位，先讓地圖以台北車站為中心顯示（不影響後續 GPS）
+    setTimeout(() => {
+      if (!state.map && state.joined) {
+        ensureMap([25.0478, 121.5170]);
+        state.map.setView([25.0478, 121.5170], 14);
+        toast('尚未取得 GPS，地圖先以預設位置顯示');
+      }
+    }, 5000);
+
+    // 更新網址，方便直接分享
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('code', code);
+      history.replaceState(null, '', u);
+    } catch (e) {}
+  }
+
+  function leave() {
+    if (!confirm('確定要離開這個活動嗎？')) return;
+    send('bye');
+    setTimeout(() => {
+      if (state.client) state.client.end(true);
+      if (state.watchId != null) navigator.geolocation.clearWatch(state.watchId);
+      location.href = location.pathname;
+    }, 250);
+  }
+
+  function copyInvite() {
+    const url = location.origin + location.pathname +
+                '?code=' + encodeURIComponent(state.code);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(() => toast('邀請連結已複製，快傳給同伴吧！'))
+        .catch(() => toast(url, 6000));
+    } else {
+      toast(url, 6000);
     }
+  }
 
-    function launchNavigation() {
-      // 導航前往私房美食補給站
-      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${supplyPoint.lat},${supplyPoint.lng}`;
-      window.open(mapsUrl, '_blank');
-    }
-  </script>
+  /* ================= 綁定事件 ================= */
+  $('#joinBtn').addEventListener('click', join);
+  $('#codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#nickInput').focus(); });
+  $('#nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+  $('#copyBtn').addEventListener('click', copyInvite);
+  $('#leaveBtn').addEventListener('click', leave);
+  $('#locBtn').addEventListener('click', window.goMe);
+  window.addEventListener('beforeunload', () => { if (state.joined) send('bye'); });
+
+  /* 由網址預填活動代號 */
+  (function prefill() {
+    const c = new URLSearchParams(location.search).get('code');
+    if (c) $('#codeInput').value = c;
+    $('#nickInput').focus();
+  })();
+
+  /* 週期性任務 */
+  setInterval(() => { sendPos(); }, PING_MS);          // 心跳：持續廣播位置
+  setInterval(() => { prunePeers(); renderPeers(); }, 5000); // 刷新距離 / 時間 / 清除離線者
+
+})();
+</script>
 </body>
 </html>
