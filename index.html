@@ -43,28 +43,26 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列優化：自動換行、防止擠壓 */
+  /* 頂部導覽列：自動換行、防止擠壓 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
     display:flex;flex-wrap:wrap;gap:8px;align-items:center;
     padding:12px;padding-top:calc(12px + env(safe-area-inset-top));
-    pointer-events:none; /* 避免空白區域阻擋地圖滑動 */
+    pointer-events:none;
   }
   #topbar > * { pointer-events:auto; }
   .chip{
     background:#000;color:#fff;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:bold;
-    display:flex;gap:8px;align-items:center;
-    border:2px solid #555;white-space:nowrap; 
-    /* 移除了強制縮水的 max-width 與 overflow:hidden */
+    display:flex;gap:8px;align-items:center;border:2px solid #555;white-space:nowrap; 
   }
   .chip .lbl{color:#aaa;}
   .chip b{color:#ffeb3b;font-size:18px;}
   
-  #copyBtn{margin-left:auto;} /* 將按鈕推至右側 */
+  #copyBtn{margin-left:auto;} 
   #topbar button{
     background:#000;color:#fff;border:2px solid #555;font-weight:bold;
     border-radius:8px;padding:10px 14px;font-size:16px;cursor:pointer;
-    white-space:nowrap; /* 確保按鈕文字不會因為空間小而斷行 */
+    white-space:nowrap;
   }
   #leaveBtn{color:#ff5252;border-color:#ff5252;}
   
@@ -79,35 +77,47 @@
   }
   #locBtn:active{transform:translateY(-50%) scale(.94)}
 
+  /* 底部面板與列表 (支援收合) */
   #panel{
     position:absolute;left:0;right:0;bottom:0;z-index:1000;
     background:#111;
     border-top-left-radius:24px;border-top-right-radius:24px;
     border-top:3px solid #444;
     padding:16px 16px calc(16px + env(safe-area-inset-bottom));
-    max-height:50vh;display:flex;flex-direction:column;
+    display:flex;flex-direction:column;
   }
   .panel-head{
     display:flex;justify-content:space-between;align-items:center;
-    font-size:16px;font-weight:bold;color:#ccc;padding:4px 8px 12px;letter-spacing:1px;
+    font-size:18px;font-weight:bold;color:#ccc;padding:8px 8px 16px;letter-spacing:1px;
+    cursor:pointer;user-select:none;
   }
-  #peerList{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .panel-head:active{opacity:0.7;}
+  
+  #peerList{
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    max-height:45vh; /* 限制最大高度，避免佔滿螢幕 */
+  }
+  
   .peer{
     display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;
     background:#222;border:2px solid #333;margin-bottom:10px;cursor:pointer;transition:.15s;
   }
   .peer:active{background:#333;border-color:#ffeb3b;}
-  .pdot{width:18px;height:18px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;}
+  .pdot{width:20px;height:20px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;}
   .pinfo{flex:1;min-width:0}
-  .pname{color:#fff;font-size:22px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pmeta{color:#bbb;font-size:16px;font-weight:bold;margin-top:6px}
+  
+  /* 放大字體 */
+  .pname{color:#fff;font-size:26px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pmeta{color:#bbb;font-size:18px;font-weight:bold;margin-top:6px}
   .navbtn{
-    background:#00e676;color:#000;text-decoration:none;font-size:18px;font-weight:900;
-    padding:12px 20px;border-radius:8px;flex:0 0 auto;border:2px solid #000;
+    background:#00e676;color:#000;text-decoration:none;font-size:20px;font-weight:900;
+    padding:14px 22px;border-radius:10px;flex:0 0 auto;border:2px solid #000;
   }
-  .empty{color:#ccc;font-size:18px;font-weight:bold;padding:24px 10px;text-align:center;line-height:1.8}
+  
+  .empty{color:#ccc;font-size:20px;font-weight:bold;padding:24px 10px;text-align:center;line-height:1.8}
 
-  /* 地圖標記 (高對比) */
+  /* 地圖標記 */
   .pin{position:absolute;left:0;top:0}
   .pin .dot{
     position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%;
@@ -142,7 +152,7 @@
 </head>
 <body>
 
-<!-- ============ 1. 加入畫面 ============ -->
+<!-- ============ 加入畫面 ============ -->
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
@@ -159,14 +169,13 @@
   </div>
 </div>
 
-<!-- ============ 2. 地圖畫面 ============ -->
+<!-- ============ 地圖畫面 ============ -->
 <div id="mapScreen" class="screen hidden">
   <div id="map"></div>
 
   <div id="topbar">
     <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
     <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
-    <!-- 移除了原本的 spacer，改用 CSS 控制按鈕靠右排列 -->
     <button id="copyBtn">🔗 邀請</button>
     <button id="leaveBtn">離開</button>
   </div>
@@ -174,7 +183,11 @@
   <button id="locBtn" title="回到我的位置">◎</button>
 
   <div id="panel">
-    <div class="panel-head"><span>同伴列表（點擊可測量距離）</span></div>
+    <!-- 加入一鍵收合的按鈕與圖示 -->
+    <div class="panel-head" id="panelToggle">
+      <span>👥 同伴列表（點擊可測量距離）</span>
+      <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
+    </div>
     <div id="peerList"></div>
   </div>
 
@@ -191,10 +204,10 @@
 
   /* ================= 常數與狀態 ================= */
   const COLORS = ['#ff5252','#448aff','#ffb300','#00e676','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
-  const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   // 公開 MQTT over WebSocket
+  const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   
   const TOPIC_PREFIX = 'geoact/v1/';
-  const STALE_MS = 90 * 1000;   // 超過 90 秒沒更新 → 視為離線
-  const PING_MS  = 15 * 1000;   // 每 15 秒廣播一次自己的位置
+  const STALE_MS = 90 * 1000;   
+  const PING_MS  = 15 * 1000;   
 
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
@@ -202,7 +215,7 @@
     myPos: null, map: null, meMarker: null, line: null,
     client: null, watchId: null, firstFix: false, joined: false
   };
-  const peers = new Map();   // id -> {id, nickname, color, lat, lng, ts, marker}
+  const peers = new Map();   
 
   const $ = s => document.querySelector(s);
 
@@ -222,7 +235,7 @@
     for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
     return COLORS[h % COLORS.length];
   }
-  function haversine(a, b) {                       // 公尺
+  function haversine(a, b) {                       
     const R = 6371000, rad = d => d * Math.PI / 180;
     const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
     const s = Math.sin(dLat / 2) ** 2 +
@@ -251,7 +264,7 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
-    peers.forEach(p => addPeerMarker(p));     // 補上已收到的同伴標記
+    peers.forEach(p => addPeerMarker(p));     
   }
 
   function iconFor(nickname, color, isMe) {
@@ -377,6 +390,14 @@
     el.scrollTop = scrollTop;
   }
 
+  /* ================= 互動：一鍵收合功能 ================= */
+  $('#panelToggle').addEventListener('click', () => {
+    const list = $('#peerList');
+    const icon = $('#toggleIcon');
+    const isHidden = list.classList.toggle('hidden');
+    icon.innerHTML = isHidden ? '▲ 展開' : '▼ 收合';
+  });
+
   /* ================= 互動：聚焦同伴 ================= */
   window.focusPeer = function (id) {
     const p = peers.get(id);
@@ -387,7 +408,6 @@
     if (state.myPos) {
       const mine = [state.myPos.lat, state.myPos.lng];
       const d = haversine(state.myPos, p);
-      // 加粗連線，加強視覺提示
       state.line = L.polyline([mine, target], {
         color: p.color, weight: 5, dashArray: '8 10', opacity: 1
       }).addTo(state.map)
@@ -442,8 +462,8 @@
       setNet(true);
       state.client.subscribe(state.topic, { qos: 0 }, err => {
         if (err) return;
-        send('hello');        // 通知大家我進來了
-        sendPos();            // 立刻公布我的位置
+        send('hello');        
+        sendPos();            
       });
     });
 
@@ -452,8 +472,8 @@
       try { m = JSON.parse(buf.toString()); } catch (e) { return; }
       if (!m || !m.id || m.id === state.id) return;
 
-      if (m.type === 'hello') { sendPos(); return; }          // 有人加入 → 回報位置
-      if (m.type === 'bye')   { removePeer(m.id); return; }   // 有人離開
+      if (m.type === 'hello') { sendPos(); return; }          
+      if (m.type === 'bye')   { removePeer(m.id); return; }   
       if (m.type === 'pos' &&
           typeof m.lat === 'number' && typeof m.lng === 'number') {
         upsertPeer(m);
@@ -523,7 +543,6 @@
 
     state.code = code;
     state.nickname = nick;
-    // 主題名稱：只保留安全字元，避免 MQTT 主題格式問題
     state.topic = TOPIC_PREFIX + code.replace(/[^\w\u4e00-\u9fa5-]/g, '_');
     state.color = hashColor(state.id);
 
@@ -535,7 +554,6 @@
     startGeo();
     connectMQTT();
 
-    // 若 5 秒後仍無定位，先讓地圖以台北車站為中心顯示（不影響後續 GPS）
     setTimeout(() => {
       if (!state.map && state.joined) {
         ensureMap([25.0478, 121.5170]);
@@ -544,7 +562,6 @@
       }
     }, 5000);
 
-    // 更新網址，方便直接分享
     try {
       const u = new URL(location.href);
       u.searchParams.set('code', code);
@@ -591,8 +608,8 @@
   })();
 
   /* 週期性任務 */
-  setInterval(() => { sendPos(); }, PING_MS);          // 心跳：持續廣播位置
-  setInterval(() => { prunePeers(); renderPeers(); }, 5000); // 刷新距離 / 時間 / 清除離線者
+  setInterval(() => { sendPos(); }, PING_MS);          
+  setInterval(() => { prunePeers(); renderPeers(); }, 5000); 
 
 })();
 </script>
