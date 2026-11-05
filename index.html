@@ -96,7 +96,7 @@
   #peerList{
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
-    max-height:45vh; /* 限制最大高度，避免佔滿螢幕 */
+    max-height:45vh;
   }
   
   .peer{
@@ -107,7 +107,6 @@
   .pdot{width:20px;height:20px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;}
   .pinfo{flex:1;min-width:0}
   
-  /* 放大字體 */
   .pname{color:#fff;font-size:26px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pmeta{color:#bbb;font-size:18px;font-weight:bold;margin-top:6px}
   .navbtn{
@@ -183,7 +182,6 @@
   <button id="locBtn" title="回到我的位置">◎</button>
 
   <div id="panel">
-    <!-- 加入一鍵收合的按鈕與圖示 -->
     <div class="panel-head" id="panelToggle">
       <span>👥 同伴列表（點擊可測量距離）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
@@ -206,7 +204,6 @@
   const COLORS = ['#ff5252','#448aff','#ffb300','#00e676','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
   const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   
   const TOPIC_PREFIX = 'geoact/v1/';
-  const STALE_MS = 90 * 1000;   
   const PING_MS  = 15 * 1000;   
 
   const state = {
@@ -334,19 +331,6 @@
     if (p.marker && state.map) state.map.removeLayer(p.marker);
     peers.delete(id);
     renderPeers();
-  }
-
-  function prunePeers() {
-    const now = Date.now();
-    let changed = false;
-    peers.forEach((p, id) => {
-      if (now - p.ts > STALE_MS) {
-        if (p.marker && state.map) state.map.removeLayer(p.marker);
-        peers.delete(id);
-        changed = true;
-      }
-    });
-    if (changed) renderPeers();
   }
 
   /* ================= 列表渲染 ================= */
@@ -609,7 +593,7 @@
 
   /* 週期性任務 */
   setInterval(() => { sendPos(); }, PING_MS);          
-  setInterval(() => { prunePeers(); renderPeers(); }, 5000); 
+  setInterval(() => { renderPeers(); }, 10000); 
 
 })();
 </script>
