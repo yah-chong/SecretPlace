@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (進階版)</title>
+<title>揪團定位 · 活動代號地圖 (進階修正版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -43,7 +43,7 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列 */
+  /* 頂部導覽列 (自動換行，避免擠壓) */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
     display:flex;flex-wrap:wrap;gap:8px;align-items:center;
@@ -69,23 +69,31 @@
   #netDot{width:12px;height:12px;border-radius:50%;background:#ff3d00;transition:.3s}
   #netDot.on{background:#00e676;box-shadow:0 0 10px #00e676}
 
-  /* 集合點頂部提示橫條 */
+  /* 集合點頂部提示橫條 (向下移位並加大字體、高對比設計) */
   #targetBanner {
-    position:absolute;top:70px;left:12px;right:12px;z-index:999;
-    background:#111;border:2px solid #ffeb3b;border-radius:12px;
-    padding:10px 16px;color:#fff;display:flex;align-items:center;justify-content:space-between;
-    box-shadow:0 4px 15px rgba(0,0,0,0.6);
+    position:absolute;top:75px;left:12px;right:12px;z-index:999;
+    background:#111;border:3px solid #ffeb3b;border-radius:14px;
+    padding:14px 18px;color:#fff;display:flex;flex-direction:column;gap:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.8);
   }
-  #targetBanner .t-info { font-size:16px; font-weight:bold; }
-  #targetBanner .t-info span { color:#ffeb3b; }
+  .target-banner-top {
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  #targetBanner .t-info { font-size:18px; font-weight:900; color:#fff; }
+  #targetBanner .t-info span { color:#ffeb3b; font-size:20px; }
+  
+  .target-banner-actions {
+    display:flex;gap:10px;width:100%;
+  }
   #targetBanner .t-btn {
-    background:#ffeb3b;color:#000;border:none;padding:6px 12px;border-radius:6px;
-    font-weight:bold;font-size:14px;cursor:pointer;text-decoration:none;
+    flex:1; background:#00e676;color:#000;border:2px solid #000;padding:12px;border-radius:10px;
+    font-weight:900;font-size:18px;cursor:pointer;text-align:center;text-decoration:none;
   }
   #targetBanner .t-clear {
-    background:transparent;color:#ff5252;border:1px solid #ff5252;padding:6px 10px;
-    border-radius:6px;font-size:14px;margin-left:6px;cursor:pointer;
+    flex:1; background:#ff1744;color:#fff;border:2px solid #fff;padding:12px;
+    border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;text-align:center;
   }
+  #targetBanner .t-clear:active { background:#d50000; }
 
   /* 控制按鈕組 (SOS & 定位跟隨) */
   .control-group {
@@ -232,12 +240,14 @@
     <button id="leaveBtn">離開</button>
   </div>
 
-  <!-- 集合點提示卡片 -->
+  <!-- 集合點提示卡片 (放大字體與高對比按鈕) -->
   <div id="targetBanner" class="hidden">
-    <div class="t-info">📍 集合點：<span id="targetDist">計算中...</span></div>
-    <div>
-      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">導航</a>
-      <button id="clearTargetBtn" class="t-clear" title="清除集合點">✕</button>
+    <div class="target-banner-top">
+      <div class="t-info">🎯 集合點距離：<span id="targetDist">計算中...</span></div>
+    </div>
+    <div class="target-banner-actions">
+      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">🗺️ 一鍵導航</a>
+      <button id="clearTargetBtn" class="t-clear">❌ 取消集合點</button>
     </div>
   </div>
 
@@ -278,8 +288,8 @@
     myPos: null, map: null, meMarker: null, line: null,
     client: null, watchId: null, firstFix: false, joined: false,
     isSOS: false,
-    isFollowing: false, // 跟隨模式狀態
-    targetPos: null,    // 集合點 {lat, lng}
+    isFollowing: false, 
+    targetPos: null,    
     targetMarker: null
   };
   const peers = new Map();   
@@ -310,7 +320,6 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  /* 語意化距離顯示幫手 */
   function fmtDistSemantic(m) {
     if (m == null) return '距離未知';
     if (m < 30) return `就在你附近 (約 ${Math.round(m)} 公尺)`;
@@ -343,12 +352,10 @@
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
 
-    /* 長按 / 雙擊地圖設定集合點 */
     state.map.on('contextmenu', function(e) {
       setTargetPos(e.latlng.lat, e.latlng.lng, true);
     });
 
-    // 當使用者手動拖曳地圖時，解除自動跟隨
     state.map.on('dragstart', function() {
       if (state.isFollowing) setFollowMode(false);
     });
@@ -429,7 +436,7 @@
     updateTargetUI();
     if (broadcast) {
       send('clear_target');
-      toast('已清除集合點');
+      toast('已取消集合點');
     }
   }
 
@@ -443,7 +450,6 @@
     const dist = state.myPos ? haversine(state.myPos, state.targetPos) : null;
     $('#targetDist').textContent = fmtDistSimple(dist);
     
-    // 設定導航連結
     const q = new URLSearchParams({
       api: '1', destination: state.targetPos.lat + ',' + state.targetPos.lng, travelmode: 'walking'
     });
@@ -474,7 +480,7 @@
     }
 
     if (!wasSOS && p.isSOS) {
-      toast('🚨 警告：' + p.nickname + ' 發出了 SOS 求救訊號！', 8000);
+      toast('🚨 警告：' + p.nickname + ' 發過了 SOS 求救訊號！', 8000);
     }
     renderPeers();
   }
@@ -506,7 +512,7 @@
       ...p,
       dist: state.myPos ? haversine(state.myPos, p) : null
     })).sort((a, b) => {
-      if (a.isSOS !== b.isSOS) return a.isSOS ? -1 : 1; // SOS 優先置頂
+      if (a.isSOS !== b.isSOS) return a.isSOS ? -1 : 1; 
       return (a.dist ?? Infinity) - (b.dist ?? Infinity);
     });
 
@@ -544,7 +550,7 @@
     const p = peers.get(id);
     if (!p || !state.map) return;
     clearLine();
-    setFollowMode(false); // 聚焦他人時關閉跟隨模式
+    setFollowMode(false); 
     const target = [p.lat, p.lng];
 
     if (state.myPos) {
@@ -563,7 +569,6 @@
     toast('已標示與「' + p.nickname + '」的距離');
   };
 
-  /* 跟隨模式切換 */
   function setFollowMode(enable) {
     state.isFollowing = enable;
     const btn = $('#locBtn');
@@ -587,7 +592,6 @@
     setFollowMode(!state.isFollowing);
   };
 
-  /* SOS 按鈕觸發 */
   function toggleSOS() {
     state.isSOS = !state.isSOS;
     const btn = $('#sosBtn');
@@ -650,7 +654,6 @@
         }
       }
       
-      // 全域廣播事件 (集合點)
       if (m.type === 'set_target' && typeof m.lat === 'number') {
         setTargetPos(m.lat, m.lng, false);
       }
@@ -680,7 +683,7 @@
 
     if (!state.firstFix) {
       state.firstFix = true;
-      setFollowMode(true); // 第一次取得定位自動進入跟隨視角
+      setFollowMode(true); 
     } else if (state.isFollowing && state.map) {
       state.map.panTo([state.myPos.lat, state.myPos.lng]);
     }
