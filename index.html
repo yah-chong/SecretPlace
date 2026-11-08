@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (進階修正版)</title>
+<title>揪團定位 · 活動代號地圖 (排版完美修正版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -43,38 +43,40 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列 (自動換行，避免擠壓) */
+  /* 頂部導覽列：整齊排列，決不重疊 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
-    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    display:flex;justify-content:space-between;align-items:center;
     padding:12px;padding-top:calc(12px + env(safe-area-inset-top));
-    pointer-events:none;
+    pointer-events:none;background:linear-gradient(to bottom, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0));
   }
   #topbar > * { pointer-events:auto; }
+  .top-left-group { display:flex; gap:8px; align-items:center; }
+  .top-right-group { display:flex; gap:8px; align-items:center; }
+
   .chip{
-    background:#000;color:#fff;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:bold;
-    display:flex;gap:8px;align-items:center;border:2px solid #555;white-space:nowrap; 
+    background:#000;color:#fff;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:bold;
+    display:flex;gap:6px;align-items:center;border:2px solid #555;white-space:nowrap; 
   }
   .chip .lbl{color:#aaa;}
-  .chip b{color:#ffeb3b;font-size:18px;}
+  .chip b{color:#ffeb3b;font-size:16px;}
   
-  #copyBtn{margin-left:auto;} 
   #topbar button{
     background:#000;color:#fff;border:2px solid #555;font-weight:bold;
-    border-radius:8px;padding:10px 14px;font-size:16px;cursor:pointer;
+    border-radius:8px;padding:8px 12px;font-size:15px;cursor:pointer;
     white-space:nowrap;
   }
-  #leaveBtn{color:#ff5252;border-color:#ff5252;}
+  #leaveBtn{color:#ff5252!important;border-color:#ff5252!important;}
   
-  #netDot{width:12px;height:12px;border-radius:50%;background:#ff3d00;transition:.3s}
-  #netDot.on{background:#00e676;box-shadow:0 0 10px #00e676}
+  #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s}
+  #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
-  /* 集合點頂部提示橫條 (向下移位並加大字體、高對比設計) */
+  /* 集合點提示卡片：改至面板上方懸浮，超大高對比，絕不與頂部衝突 */
   #targetBanner {
-    position:absolute;top:75px;left:12px;right:12px;z-index:999;
-    background:#111;border:3px solid #ffeb3b;border-radius:14px;
+    position:absolute;left:16px;right:16px;bottom:calc(130px + env(safe-area-inset-bottom));z-index:999;
+    background:#111;border:3px solid #ffeb3b;border-radius:16px;
     padding:14px 18px;color:#fff;display:flex;flex-direction:column;gap:10px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.8);
+    box-shadow:0 10px 30px rgba(0,0,0,0.85);
   }
   .target-banner-top {
     display:flex;justify-content:space-between;align-items:center;
@@ -83,21 +85,21 @@
   #targetBanner .t-info span { color:#ffeb3b; font-size:20px; }
   
   .target-banner-actions {
-    display:flex;gap:10px;width:100%;
+    display:flex;gap:12px;width:100%;
   }
   #targetBanner .t-btn {
-    flex:1; background:#00e676;color:#000;border:2px solid #000;padding:12px;border-radius:10px;
+    flex:1; background:#00e676;color:#000;border:2px solid #000;padding:14px;border-radius:10px;
     font-weight:900;font-size:18px;cursor:pointer;text-align:center;text-decoration:none;
   }
   #targetBanner .t-clear {
-    flex:1; background:#ff1744;color:#fff;border:2px solid #fff;padding:12px;
+    flex:1; background:#ff1744;color:#fff;border:2px solid #fff;padding:14px;
     border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;text-align:center;
   }
   #targetBanner .t-clear:active { background:#d50000; }
 
   /* 控制按鈕組 (SOS & 定位跟隨) */
   .control-group {
-    position:absolute;right:16px;top:45%;transform:translateY(-50%);z-index:1000;
+    position:absolute;right:16px;top:38%;transform:translateY(-50%);z-index:1000;
     display:flex;flex-direction:column;gap:14px;
   }
   .ctrl-btn {
@@ -134,7 +136,7 @@
   #peerList{
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
-    max-height:45vh;
+    max-height:40vh;
   }
   
   .peer{
@@ -233,14 +235,19 @@
 <div id="mapScreen" class="screen hidden">
   <div id="map"></div>
 
+  <!-- 頂部導覽列：左右分開，永不重疊 -->
   <div id="topbar">
-    <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
-    <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
-    <button id="copyBtn">🔗 邀請</button>
-    <button id="leaveBtn">離開</button>
+    <div class="top-left-group">
+      <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
+      <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
+    </div>
+    <div class="top-right-group">
+      <button id="copyBtn">🔗 邀請</button>
+      <button id="leaveBtn">離開</button>
+    </div>
   </div>
 
-  <!-- 集合點提示卡片 (放大字體與高對比按鈕) -->
+  <!-- 集合點提示卡片：改至面板上方懸浮，按鈕超大且高對比 -->
   <div id="targetBanner" class="hidden">
     <div class="target-banner-top">
       <div class="t-info">🎯 集合點距離：<span id="targetDist">計算中...</span></div>
@@ -480,7 +487,7 @@
     }
 
     if (!wasSOS && p.isSOS) {
-      toast('🚨 警告：' + p.nickname + ' 發過了 SOS 求救訊號！', 8000);
+      toast('🚨 警告：' + p.nickname + ' 發出了 SOS 求救訊號！', 8000);
     }
     renderPeers();
   }
