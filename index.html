@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (極簡浮條版)</title>
+<title>揪團定位 · 活動代號地圖 (地標搜尋升級版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -71,15 +71,47 @@
   #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
-  /* 🎯 超緊湊膠囊型集合點橫條（極簡單行設計，減少 70% 版面） */
+  /* 🔍 搜尋集合點按鈕與面板 */
+  #searchToggleBtn {
+    background: #ffeb3b !important; color: #000 !important; border-color: #ffeb3b !important;
+  }
+  
+  #searchModal {
+    position: absolute; inset: 0; z-index: 2000; background: rgba(0,0,0,0.8);
+    display: flex; flex-direction: column; padding: 20px; padding-top: calc(20px + env(safe-area-inset-top));
+  }
+  .search-box-card {
+    background: #111; border: 2px solid #444; border-radius: 16px; padding: 20px;
+    display: flex; flex-direction: column; gap: 12px; max-width: 500px; width: 100%; margin: 0 auto;
+  }
+  .search-input-row { display: flex; gap: 8px; }
+  .search-input-row input { font-size: 18px; padding: 12px; }
+  .search-input-row button {
+    background: #ffeb3b; color: #000; border: none; border-radius: 12px;
+    padding: 0 20px; font-weight: bold; font-size: 16px; cursor: pointer; white-space: nowrap;
+  }
+  #searchResults {
+    max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;
+  }
+  .search-item {
+    background: #222; border: 1px solid #444; padding: 14px; border-radius: 10px;
+    color: #fff; font-size: 16px; font-weight: bold; cursor: pointer;
+  }
+  .search-item:active { background: #333; border-color: #ffeb3b; }
+  .close-search {
+    background: #333; color: #fff; border: none; padding: 12px; border-radius: 10px;
+    font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 10px;
+  }
+
+  /* 🎯 集合點膠囊橫條 */
   #targetBanner {
     position:absolute;left:12px;right:12px;bottom:calc(75px + env(safe-area-inset-bottom));z-index:999;
     background:rgba(17, 17, 17, 0.95);border:2px solid #ffeb3b;border-radius:30px;
     padding:6px 12px;color:#fff;display:flex;align-items:center;justify-content:space-between;
     box-shadow:0 6px 16px rgba(0,0,0,0.8);backdrop-filter:blur(4px);
   }
-  #targetBanner .t-info { font-size:14px; font-weight:bold; color:#ccc; white-space:nowrap; }
-  #targetBanner .t-info span { color:#ffeb3b; font-size:16px; font-weight:900; }
+  #targetBanner .t-info { font-size:14px; font-weight:bold; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 50%; }
+  #targetBanner .t-info span { color:#ffeb3b; font-size:15px; font-weight:900; }
   
   .target-banner-actions { display:flex; gap:6px; align-items:center; }
   #targetBanner .t-btn {
@@ -105,11 +137,8 @@
   }
   .ctrl-btn:active{transform:scale(.94)}
   
-  /* SOS 按鈕 */
   #sosBtn { background:#d32f2f; border-color:#ff5252; color:#fff; animation: pulse 2s infinite; }
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
-  
-  /* 跟隨定位按鈕 */
   #locBtn.following { background:#00e676; color:#000; border-color:#fff; }
 
   /* 底部面板 */
@@ -165,13 +194,9 @@
     padding:4px 10px;border-radius:8px;white-space:nowrap;border:2px solid #000;
   }
   .pin.me .dot{box-shadow:0 0 0 4px rgba(255,255,255,.9),0 0 0 12px rgba(0,230,118,.5)}
-  .pin.sos .dot {
-    background:#ff1744!important;
-    animation: sosPulse 0.8s infinite alternate;
-  }
+  .pin.sos .dot { background:#ff1744!important; animation: sosPulse 0.8s infinite alternate; }
   .pin.sos .name { background:#ff1744; color:#fff; border-color:#fff; }
 
-  /* 集合點地標 Marker 樣式 */
   .target-pin {
     font-size: 32px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
     transform: translate(-50%, -100%);
@@ -213,7 +238,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、長按設定集合點與一鍵 SOS 求助。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、搜尋地標設定集合點與一鍵 SOS 求助。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -237,14 +262,28 @@
       <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
     </div>
     <div class="top-right-group">
+      <button id="searchToggleBtn">🔍 找地點</button>
       <button id="copyBtn">🔗 邀請</button>
       <button id="leaveBtn">離開</button>
     </div>
   </div>
 
-  <!-- 🎯 超緊湊集合點膠囊橫條 (無圖示、高對比、縮減 70% 體積) -->
+  <!-- 🔍 地點搜尋彈出視窗 -->
+  <div id="searchModal" class="hidden">
+    <div class="search-box-card">
+      <h3 style="margin:0 0 8px; color:#ffeb3b; font-size:20px;">尋找集合地點</h3>
+      <div class="search-input-row">
+        <input id="searchInput" placeholder="輸入地名 (例如：左營高鐵站)" autocomplete="off">
+        <button id="searchSubmitBtn">搜尋</button>
+      </div>
+      <div id="searchResults"></div>
+      <button id="closeSearchModal" class="close-search">關閉</button>
+    </div>
+  </div>
+
+  <!-- 🎯 集合點膠囊橫條 -->
   <div id="targetBanner" class="hidden">
-    <div class="t-info">集合點 <span id="targetDist">計算中...</span></div>
+    <div class="t-info"><span id="targetName">集合點</span> <span id="targetDist">計算中...</span></div>
     <div class="target-banner-actions">
       <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">一鍵導航</a>
       <button id="clearTargetBtn" class="t-clear">取消集合點</button>
@@ -259,7 +298,7 @@
 
   <div id="panel">
     <div class="panel-head" id="panelToggle">
-      <span>👥 同伴列表（長按地圖可設集合點）</span>
+      <span>👥 同伴列表（可點擊「找地點」設集合點）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
     </div>
     <div id="peerList"></div>
@@ -276,7 +315,6 @@
 (function () {
   'use strict';
 
-  /* ================= 常數與狀態 ================= */
   const COLORS = ['#ff5252','#448aff','#ffb300','#00e676','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
   const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   
   const TOPIC_PREFIX = 'geoact/v1/';
@@ -290,13 +328,13 @@
     isSOS: false,
     isFollowing: false, 
     targetPos: null,    
+    targetName: '集合點',
     targetMarker: null
   };
   const peers = new Map();   
 
   const $ = s => document.querySelector(s);
 
-  /* ================= 工具函式 ================= */
   function esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -352,10 +390,6 @@
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
 
-    state.map.on('contextmenu', function(e) {
-      setTargetPos(e.latlng.lat, e.latlng.lng, true);
-    });
-
     state.map.on('dragstart', function() {
       if (state.isFollowing) setFollowMode(false);
     });
@@ -405,9 +439,45 @@
     state.line = null;
   }
 
-  /* ================= 集合點 (Destination) 管理 ================= */
-  function setTargetPos(lat, lng, broadcast) {
+  /* ================= 搜尋地點設定集合點 ================= */
+  async function searchLocation(query) {
+    if (!query.trim()) return toast('請輸入要搜尋的地點名稱');
+    toast('正在搜尋地點...');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
+        headers: { 'Accept-Language': 'zh-Hant' }
+      });
+      const data = await res.json();
+      const resultsEl = $('#searchResults');
+      resultsEl.innerHTML = '';
+
+      if (!data.length) {
+        resultsEl.innerHTML = '<div style="color:#aaa; text-align:center; padding:12px;">找不到相關地點，請嘗試更精確的關鍵字</div>';
+        return;
+      }
+
+      data.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'search-item';
+        div.textContent = item.display_name;
+        div.addEventListener('click', () => {
+          const lat = parseFloat(item.lat);
+          const lng = parseFloat(item.lon);
+          const shortName = item.display_name.split(',')[0];
+          setTargetPos(lat, lng, shortName, true);
+          $('#searchModal').classList.add('hidden');
+          if (state.map) state.map.setView([lat, lng], 16);
+        });
+        resultsEl.appendChild(div);
+      });
+    } catch (e) {
+      toast('搜尋發生錯誤，請檢查網路');
+    }
+  }
+
+  function setTargetPos(lat, lng, name, broadcast) {
     state.targetPos = { lat, lng };
+    state.targetName = name || '集合點';
     if (!state.targetMarker && state.map) {
       const targetIcon = L.divIcon({
         className: 'target-pin',
@@ -422,13 +492,14 @@
 
     updateTargetUI();
     if (broadcast) {
-      send('set_target', { lat, lng });
-      toast('🎯 已設定全體集合點！');
+      send('set_target', { lat, lng, name: state.targetName });
+      toast('🎯 已設定集合點：' + state.targetName);
     }
   }
 
   function clearTargetPos(broadcast) {
     state.targetPos = null;
+    state.targetName = '集合點';
     if (state.targetMarker && state.map) {
       state.map.removeLayer(state.targetMarker);
       state.targetMarker = null;
@@ -448,7 +519,8 @@
     }
     banner.classList.remove('hidden');
     const dist = state.myPos ? haversine(state.myPos, state.targetPos) : null;
-    $('#targetDist').textContent = fmtDistSimple(dist);
+    $('#targetName').textContent = state.targetName;
+    $('#targetDist').textContent = '(' + fmtDistSimple(dist) + ')';
     
     const q = new URLSearchParams({
       api: '1', destination: state.targetPos.lat + ',' + state.targetPos.lng, travelmode: 'walking'
@@ -517,7 +589,7 @@
     });
 
     if (!list.length) {
-      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：長按地圖可設定全體集合點)</small></div>';
+      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：點擊上方「🔍 找地點」可設定全體集合點)</small></div>';
       return;
     }
 
@@ -655,7 +727,7 @@
       }
       
       if (m.type === 'set_target' && typeof m.lat === 'number') {
-        setTargetPos(m.lat, m.lng, false);
+        setTargetPos(m.lat, m.lng, m.name, false);
       }
       if (m.type === 'clear_target') {
         clearTargetPos(false);
@@ -782,6 +854,22 @@
   $('#locBtn').addEventListener('click', window.toggleFollowMe);
   $('#sosBtn').addEventListener('click', toggleSOS);
   $('#clearTargetBtn').addEventListener('click', () => clearTargetPos(true));
+  
+  /* 搜尋相關事件 */
+  $('#searchToggleBtn').addEventListener('click', () => {
+    $('#searchModal').classList.remove('hidden');
+    $('#searchInput').focus();
+  });
+  $('#closeSearchModal').addEventListener('click', () => {
+    $('#searchModal').classList.add('hidden');
+  });
+  $('#searchSubmitBtn').addEventListener('click', () => {
+    searchLocation($('#searchInput').value);
+  });
+  $('#searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchLocation($('#searchInput').value);
+  });
+
   window.addEventListener('beforeunload', () => { if (state.joined) send('bye'); });
 
   /* 由網址預填活動代號 */
