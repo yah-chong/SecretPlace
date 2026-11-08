@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (排版完美修正版)</title>
+<title>揪團定位 · 活動代號地圖 (極簡浮條版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -43,7 +43,7 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列：整齊排列，決不重疊 */
+  /* 頂部導覽列 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
     display:flex;justify-content:space-between;align-items:center;
@@ -71,35 +71,30 @@
   #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
-  /* 集合點提示卡片：改至面板上方懸浮，超大高對比，絕不與頂部衝突 */
+  /* 🎯 超緊湊膠囊型集合點橫條（極簡單行設計，減少 70% 版面） */
   #targetBanner {
-    position:absolute;left:16px;right:16px;bottom:calc(130px + env(safe-area-inset-bottom));z-index:999;
-    background:#111;border:3px solid #ffeb3b;border-radius:16px;
-    padding:14px 18px;color:#fff;display:flex;flex-direction:column;gap:10px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.85);
+    position:absolute;left:12px;right:12px;bottom:calc(75px + env(safe-area-inset-bottom));z-index:999;
+    background:rgba(17, 17, 17, 0.95);border:2px solid #ffeb3b;border-radius:30px;
+    padding:6px 12px;color:#fff;display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 6px 16px rgba(0,0,0,0.8);backdrop-filter:blur(4px);
   }
-  .target-banner-top {
-    display:flex;justify-content:space-between;align-items:center;
-  }
-  #targetBanner .t-info { font-size:18px; font-weight:900; color:#fff; }
-  #targetBanner .t-info span { color:#ffeb3b; font-size:20px; }
+  #targetBanner .t-info { font-size:14px; font-weight:bold; color:#ccc; white-space:nowrap; }
+  #targetBanner .t-info span { color:#ffeb3b; font-size:16px; font-weight:900; }
   
-  .target-banner-actions {
-    display:flex;gap:12px;width:100%;
-  }
+  .target-banner-actions { display:flex; gap:6px; align-items:center; }
   #targetBanner .t-btn {
-    flex:1; background:#00e676;color:#000;border:2px solid #000;padding:14px;border-radius:10px;
-    font-weight:900;font-size:18px;cursor:pointer;text-align:center;text-decoration:none;
+    background:#00e676;color:#000;border:none;padding:6px 12px;border-radius:20px;
+    font-weight:900;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;
   }
   #targetBanner .t-clear {
-    flex:1; background:#ff1744;color:#fff;border:2px solid #fff;padding:14px;
-    border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;text-align:center;
+    background:#ff1744;color:#fff;border:none;padding:6px 12px;
+    border-radius:20px;font-size:14px;font-weight:900;cursor:pointer;white-space:nowrap;
   }
   #targetBanner .t-clear:active { background:#d50000; }
 
   /* 控制按鈕組 (SOS & 定位跟隨) */
   .control-group {
-    position:absolute;right:16px;top:38%;transform:translateY(-50%);z-index:1000;
+    position:absolute;right:16px;top:40%;transform:translateY(-50%);z-index:1000;
     display:flex;flex-direction:column;gap:14px;
   }
   .ctrl-btn {
@@ -123,12 +118,12 @@
     background:#111;
     border-top-left-radius:24px;border-top-right-radius:24px;
     border-top:3px solid #444;
-    padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
     display:flex;flex-direction:column;
   }
   .panel-head{
     display:flex;justify-content:space-between;align-items:center;
-    font-size:18px;font-weight:bold;color:#ccc;padding:8px 8px 16px;letter-spacing:1px;
+    font-size:16px;font-weight:bold;color:#ccc;padding:4px 4px 8px;letter-spacing:1px;
     cursor:pointer;user-select:none;
   }
   .panel-head:active{opacity:0.7;}
@@ -136,27 +131,27 @@
   #peerList{
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
-    max-height:40vh;
+    max-height:38vh;
   }
   
   .peer{
-    display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;
-    background:#222;border:2px solid #333;margin-bottom:10px;cursor:pointer;transition:.15s;
+    display:flex;align-items:center;gap:14px;padding:14px;border-radius:12px;
+    background:#222;border:2px solid #333;margin-bottom:8px;cursor:pointer;transition:.15s;
   }
   .peer.sos-active { border-color:#ff1744; background:#3a0d0d; animation: alertFlash 1s infinite alternate; }
   .peer:active{background:#333;border-color:#ffeb3b;}
-  .pdot{width:20px;height:20px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;}
+  .pdot{width:18px;height:18px;border-radius:50%;flex:0 0 auto;border:2px solid #fff;}
   .pinfo{flex:1;min-width:0}
   
-  .pname{color:#fff;font-size:24px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px;}
+  .pname{color:#fff;font-size:22px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px;}
   .sos-tag { background:#ff1744; color:#fff; font-size:12px; padding:2px 6px; border-radius:4px; font-weight:bold; }
-  .pmeta{color:#bbb;font-size:16px;font-weight:bold;margin-top:6px}
+  .pmeta{color:#bbb;font-size:15px;font-weight:bold;margin-top:4px}
   .navbtn{
-    background:#00e676;color:#000;text-decoration:none;font-size:18px;font-weight:900;
-    padding:12px 18px;border-radius:10px;flex:0 0 auto;border:2px solid #000;
+    background:#00e676;color:#000;text-decoration:none;font-size:16px;font-weight:900;
+    padding:10px 16px;border-radius:8px;flex:0 0 auto;border:2px solid #000;
   }
   
-  .empty{color:#ccc;font-size:20px;font-weight:bold;padding:24px 10px;text-align:center;line-height:1.8}
+  .empty{color:#ccc;font-size:18px;font-weight:bold;padding:16px 10px;text-align:center;line-height:1.6}
 
   /* 地圖標記樣式 */
   .pin{position:absolute;left:0;top:0}
@@ -235,7 +230,7 @@
 <div id="mapScreen" class="screen hidden">
   <div id="map"></div>
 
-  <!-- 頂部導覽列：左右分開，永不重疊 -->
+  <!-- 頂部導覽列 -->
   <div id="topbar">
     <div class="top-left-group">
       <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
@@ -247,14 +242,12 @@
     </div>
   </div>
 
-  <!-- 集合點提示卡片：改至面板上方懸浮，按鈕超大且高對比 -->
+  <!-- 🎯 超緊湊集合點膠囊橫條 (無圖示、高對比、縮減 70% 體積) -->
   <div id="targetBanner" class="hidden">
-    <div class="target-banner-top">
-      <div class="t-info">🎯 集合點距離：<span id="targetDist">計算中...</span></div>
-    </div>
+    <div class="t-info">集合點 <span id="targetDist">計算中...</span></div>
     <div class="target-banner-actions">
-      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">🗺️ 一鍵導航</a>
-      <button id="clearTargetBtn" class="t-clear">❌ 取消集合點</button>
+      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">一鍵導航</a>
+      <button id="clearTargetBtn" class="t-clear">取消集合點</button>
     </div>
   </div>
 
