@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (介面優化版)</title>
+<title>揪團定位 · 活動代號地圖 (雙模式集合點版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -43,7 +43,7 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列：簡化讓位給離開按鈕 */
+  /* 頂部導覽列 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
     display:flex;justify-content:space-between;align-items:center;
@@ -71,13 +71,13 @@
   #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
-  /* 右側控制按鈕組 (SOS & 定位跟隨 & 找地點) */
+  /* 🔍 右側控制按鈕組 (SOS / 定位 / 找地點) */
   .control-group {
-    position:absolute;right:16px;top:40%;transform:translateY(-50%);z-index:1000;
+    position:absolute;right:16px;top:42%;transform:translateY(-50%);z-index:1000;
     display:flex;flex-direction:column;gap:12px;
   }
   .ctrl-btn {
-    width:64px;height:64px;border-radius:50%;border:3px solid #fff;
+    width:62px;height:62px;border-radius:50%;border:3px solid #fff;
     background:#000;color:#fff;font-size:22px;font-weight:bold;cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;
     flex-direction:column;line-height:1.2;
@@ -89,35 +89,40 @@
   #locBtn.following { background:#00e676; color:#000; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
 
-  /* 🔍 地點搜尋彈出視窗 (優化滑動與條列) */
+  /* 🔍 地點搜尋彈出視窗（條列式可滑動選單） */
   #searchModal {
     position: absolute; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85);
-    display: flex; flex-direction: column; padding: 20px; padding-top: calc(20px + env(safe-area-inset-top));
+    display: flex; flex-direction: column; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top));
+    backdrop-filter: blur(5px);
   }
   .search-box-card {
-    background: #111; border: 2px solid #444; border-radius: 16px; padding: 20px;
+    background: #111; border: 2px solid #ffeb3b; border-radius: 16px; padding: 20px;
     display: flex; flex-direction: column; gap: 12px; max-width: 500px; width: 100%; margin: 0 auto;
     box-shadow: 0 10px 30px rgba(0,0,0,0.9);
   }
   .search-input-row { display: flex; gap: 8px; }
-  .search-input-row input { font-size: 18px; padding: 12px; border-radius: 10px; flex: 1; }
+  .search-input-row input { font-size: 18px; padding: 12px; border-radius: 10px; border: 2px solid #555; background: #222; color: #fff; flex: 1; }
   .search-input-row button {
     background: #ffeb3b; color: #000; border: none; border-radius: 10px;
-    padding: 0 18px; font-weight: bold; font-size: 16px; cursor: pointer; white-space: nowrap;
+    padding: 0 18px; font-weight: 900; font-size: 16px; cursor: pointer; white-space: nowrap;
   }
   #searchResults {
     max-height: 55vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    display: flex; flex-direction: column; gap: 10px; margin-top: 8px; padding-right: 4px;
+    display: flex; flex-direction: column; gap: 8px; margin-top: 6px;
+    padding-right: 4px;
   }
   .search-item {
-    background: #222; border: 2px solid #333; padding: 14px 16px; border-radius: 12px;
-    color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; transition: .15s;
-    line-height: 1.4; word-break: break-all;
+    background: #222; border: 1.5px solid #444; padding: 14px; border-radius: 10px;
+    color: #fff; font-size: 15px; font-weight: bold; cursor: pointer; transition: .15s;
+    line-height: 1.4; display: flex; align-items: center; justify-content: space-between;
   }
   .search-item:active { background: #333; border-color: #ffeb3b; }
+  .search-item-title { color: #ffeb3b; font-size: 16px; font-weight: 900; }
+  .search-item-sub { color: #aaa; font-size: 13px; font-weight: normal; margin-top: 4px; }
+
   .close-search {
-    background: #333; color: #fff; border: 1px solid #555; padding: 12px; border-radius: 10px;
-    font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 6px;
+    background: #333; color: #fff; border: 1px solid #666; padding: 12px; border-radius: 10px;
+    font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 8px;
   }
 
   /* 🎯 集合點膠囊橫條 */
@@ -139,7 +144,6 @@
     background:#ff1744;color:#fff;border:none;padding:6px 12px;
     border-radius:20px;font-size:14px;font-weight:900;cursor:pointer;white-space:nowrap;
   }
-  #targetBanner .t-clear:active { background:#d50000; }
 
   /* 底部面板 */
   #panel{
@@ -238,7 +242,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、搜尋地點設定集合點與一鍵 SOS 求助。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、長按地圖或搜尋地點設定集合點與一鍵 SOS 求助。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -267,12 +271,12 @@
     </div>
   </div>
 
-  <!-- 🔍 地點搜尋彈出視窗 (支援多結果條列與滑動) -->
+  <!-- 🔍 地點搜尋彈出視窗 -->
   <div id="searchModal" class="hidden">
     <div class="search-box-card">
-      <h3 style="margin:0 0 4px; color:#ffeb3b; font-size:20px;">尋找集合地點</h3>
+      <h3 style="margin:0; color:#ffeb3b; font-size:20px;">🔍 搜尋集合地點</h3>
       <div class="search-input-row">
-        <input id="searchInput" placeholder="輸入地點 (如：左營高鐵站)" autocomplete="off">
+        <input id="searchInput" placeholder="輸入關鍵字 (例如：左營高鐵站)" autocomplete="off">
         <button id="searchSubmitBtn">搜尋</button>
       </div>
       <div id="searchResults"></div>
@@ -289,16 +293,16 @@
     </div>
   </div>
 
-  <!-- 右側控制按鈕組 (SOS & 定位跟隨 & 找地點按鈕) -->
+  <!-- 控制按鈕組 (SOS / 定位 / 搜尋) -->
   <div class="control-group">
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:10px;" id="locTxt">定位</span></button>
-    <button id="searchToggleBtn" class="ctrl-btn" title="搜尋集合地點">🔍<span style="font-size:10px;">找地點</span></button>
+    <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:10px;">找地點</span></button>
   </div>
 
   <div id="panel">
     <div class="panel-head" id="panelToggle">
-      <span>👥 同伴列表（點擊右側「🔍 找地點」設集合點）</span>
+      <span>👥 同伴列表（長按地圖或點「🔍找地點」設集合點）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
     </div>
     <div id="peerList"></div>
@@ -381,7 +385,7 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
-  /* ================= 地圖初始化與控制 ================= */
+  /* ================= 地圖初始化與控制 (保留長按/右鍵設定集合點) ================= */
   function ensureMap(latlng) {
     if (state.map) return;
     state.map = L.map('map', { zoomControl: false, attributionControl: true }).setView(latlng, 17);
@@ -389,6 +393,11 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
+
+    /* 保留原有的長按/右鍵直接設定集合點功能 */
+    state.map.on('contextmenu', function(e) {
+      setTargetPos(e.latlng.lat, e.latlng.lng, '自訂集合點', true);
+    });
 
     state.map.on('dragstart', function() {
       if (state.isFollowing) setFollowMode(false);
@@ -439,10 +448,10 @@
     state.line = null;
   }
 
-  /* ================= 搜尋地點設定集合點 ================= */
+  /* ================= 搜尋地點與集合點管理 ================= */
   async function searchLocation(query) {
     if (!query.trim()) return toast('請輸入要搜尋的地點名稱');
-    toast('正在搜尋地點...');
+    toast('正在檢索地點...');
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10`, {
         headers: { 'Accept-Language': 'zh-Hant' }
@@ -452,19 +461,28 @@
       resultsEl.innerHTML = '';
 
       if (!data.length) {
-        resultsEl.innerHTML = '<div style="color:#aaa; text-align:center; padding:16px;">找不到相關地點，請嘗試輸入更詳細的關鍵字</div>';
+        resultsEl.innerHTML = '<div style="color:#aaa; text-align:center; padding:16px;">找不到相關地點，請嘗試輸入更精確關鍵字</div>';
         return;
       }
 
       data.forEach(item => {
+        const parts = item.display_name.split(',');
+        const mainTitle = parts[0];
+        const subTitle = parts.slice(1, 4).join(', ');
+
         const div = document.createElement('div');
         div.className = 'search-item';
-        div.textContent = item.display_name;
+        div.innerHTML = `
+          <div>
+            <div class="search-item-title">📍 ${esc(mainTitle)}</div>
+            <div class="search-item-sub">${esc(subTitle)}</div>
+          </div>
+          <span style="color:#00e676; font-size:14px; font-weight:bold;">選取 ➔</span>
+        `;
         div.addEventListener('click', () => {
           const lat = parseFloat(item.lat);
           const lng = parseFloat(item.lon);
-          const shortName = item.display_name.split(',')[0];
-          setTargetPos(lat, lng, shortName, true);
+          setTargetPos(lat, lng, mainTitle, true);
           $('#searchModal').classList.add('hidden');
           if (state.map) state.map.setView([lat, lng], 16);
         });
@@ -493,7 +511,7 @@
     updateTargetUI();
     if (broadcast) {
       send('set_target', { lat, lng, name: state.targetName });
-      toast('🎯 已設定集合點：' + state.targetName);
+      toast('🎯 已設定全體集合點：' + state.targetName);
     }
   }
 
@@ -589,7 +607,7 @@
     });
 
     if (!list.length) {
-      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：點擊右側「🔍 找地點」設全體集合點)</small></div>';
+      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：長按地圖或按「🔍找地點」設集合點)</small></div>';
       return;
     }
 
@@ -855,7 +873,7 @@
   $('#sosBtn').addEventListener('click', toggleSOS);
   $('#clearTargetBtn').addEventListener('click', () => clearTargetPos(true));
   
-  /* 搜尋地點按鈕與對話框事件 */
+  /* 搜尋按鈕及視窗綁定 */
   $('#searchToggleBtn').addEventListener('click', () => {
     $('#searchModal').classList.remove('hidden');
     $('#searchInput').focus();
