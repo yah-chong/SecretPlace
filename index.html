@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (雙模式集合點版)</title>
+<title>揪團定位 · 活動代號地圖 (按鈕架構優化版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -43,38 +43,30 @@
   #mapScreen{background:#000}
   #map{position:absolute;inset:0;background:#000}
 
-  /* 頂部導覽列 */
+  /* 頂部資訊列：專注顯示資訊，支援長文字超長省略 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
-    display:flex;justify-content:space-between;align-items:center;
+    display:flex;gap:8px;align-items:center;
     padding:12px;padding-top:calc(12px + env(safe-area-inset-top));
     pointer-events:none;background:linear-gradient(to bottom, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0));
   }
   #topbar > * { pointer-events:auto; }
-  .top-left-group { display:flex; gap:8px; align-items:center; }
-  .top-right-group { display:flex; gap:8px; align-items:center; }
 
   .chip{
     background:#000;color:#fff;border-radius:8px;padding:8px 12px;font-size:15px;font-weight:bold;
     display:flex;gap:6px;align-items:center;border:2px solid #555;white-space:nowrap; 
+    max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
   }
   .chip .lbl{color:#aaa;}
-  .chip b{color:#ffeb3b;font-size:16px;}
+  .chip b{color:#ffeb3b;font-size:16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
   
-  #topbar button{
-    background:#000;color:#fff;border:2px solid #555;font-weight:bold;
-    border-radius:8px;padding:8px 12px;font-size:15px;cursor:pointer;
-    white-space:nowrap;
-  }
-  #leaveBtn{color:#ff5252!important;border-color:#ff5252!important;}
-  
-  #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s}
+  #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s;flex-shrink:0;}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
-  /* 🔍 右側控制按鈕組 (SOS / 定位 / 找地點) */
+  /* 🔍 右側控制按鈕組 (SOS / 定位 / 找地點 / 邀請 / 離開) */
   .control-group {
     position:absolute;right:16px;top:42%;transform:translateY(-50%);z-index:1000;
-    display:flex;flex-direction:column;gap:12px;
+    display:flex;flex-direction:column;gap:10px;
   }
   .ctrl-btn {
     width:62px;height:62px;border-radius:50%;border:3px solid #fff;
@@ -88,8 +80,10 @@
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
   #locBtn.following { background:#00e676; color:#000; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
+  #copyBtn { background:#000; color:#fff; border-color:#888; }
+  #leaveBtn { background:#222; color:#ff5252!important; border-color:#ff5252!important; }
 
-  /* 🔍 地點搜尋彈出視窗（條列式可滑動選單） */
+  /* 🔍 地點搜尋彈出視窗 */
   #searchModal {
     position: absolute; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85);
     display: flex; flex-direction: column; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top));
@@ -242,7 +236,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、長按地圖或搜尋地點設定集合點與一鍵 SOS 求助。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、搜尋地點設定集合點與一鍵 SOS 求助。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -259,16 +253,10 @@
 <div id="mapScreen" class="screen hidden">
   <div id="map"></div>
 
-  <!-- 頂部導覽列 -->
+  <!-- 頂部資訊列：僅保留狀態與代號顯示（支援長字串自動省略） -->
   <div id="topbar">
-    <div class="top-left-group">
-      <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
-      <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
-    </div>
-    <div class="top-right-group">
-      <button id="copyBtn">🔗 邀請</button>
-      <button id="leaveBtn">離開</button>
-    </div>
+    <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
+    <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
   </div>
 
   <!-- 🔍 地點搜尋彈出視窗 -->
@@ -293,16 +281,18 @@
     </div>
   </div>
 
-  <!-- 控制按鈕組 (SOS / 定位 / 搜尋) -->
+  <!-- 右側控制按鈕組 (SOS / 定位 / 找地點 / 邀請 / 離開) -->
   <div class="control-group">
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:10px;" id="locTxt">定位</span></button>
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:10px;">找地點</span></button>
+    <button id="copyBtn" class="ctrl-btn" title="複製邀請連結">🔗<span style="font-size:10px;">邀請</span></button>
+    <button id="leaveBtn" class="ctrl-btn" title="離開活動">🚪<span style="font-size:10px;">離開</span></button>
   </div>
 
   <div id="panel">
     <div class="panel-head" id="panelToggle">
-      <span>👥 同伴列表（長按地圖或點「🔍找地點」設集合點）</span>
+      <span>👥 同伴列表（點右側「🔍找地點」設集合點）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
     </div>
     <div id="peerList"></div>
@@ -385,7 +375,7 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
-  /* ================= 地圖初始化與控制 (保留長按/右鍵設定集合點) ================= */
+  /* ================= 地圖初始化與控制 ================= */
   function ensureMap(latlng) {
     if (state.map) return;
     state.map = L.map('map', { zoomControl: false, attributionControl: true }).setView(latlng, 17);
@@ -394,9 +384,9 @@
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
 
-    /* 保留原有的長按/右鍵直接設定集合點功能 */
+    /* 保留：長按 / 右鍵直接設定集合點 */
     state.map.on('contextmenu', function(e) {
-      setTargetPos(e.latlng.lat, e.latlng.lng, '自訂集合點', true);
+      setTargetPos(e.latlng.lat, e.latlng.lng, '自訂地點', true);
     });
 
     state.map.on('dragstart', function() {
@@ -448,7 +438,7 @@
     state.line = null;
   }
 
-  /* ================= 搜尋地點與集合點管理 ================= */
+  /* ================= 搜尋地點設定集合點 ================= */
   async function searchLocation(query) {
     if (!query.trim()) return toast('請輸入要搜尋的地點名稱');
     toast('正在檢索地點...');
@@ -607,7 +597,7 @@
     });
 
     if (!list.length) {
-      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：長按地圖或按「🔍找地點」設集合點)</small></div>';
+      el.innerHTML = '<div class="empty">目前只有你一個人 🌱<br>把邀請連結傳給同伴加入吧！<br><small style="color:#666;font-size:14px;">(提示：長按地圖或點擊「🔍找地點」可設集合點)</small></div>';
       return;
     }
 
