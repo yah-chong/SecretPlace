@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (離開按鈕優化版)</title>
+<title>揪團定位 · 活動代號地圖 (控制欄微調版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -65,7 +65,7 @@
 
   /* 🔍 右側控制按鈕組 */
   .control-group {
-    position:absolute;right:16px;top:40%;transform:translateY(-50%);z-index:1000;
+    position:absolute;right:16px;top:38%;transform:translateY(-50%);z-index:1000;
     display:flex;flex-direction:column;gap:10px; align-items:flex-end;
   }
   
@@ -82,15 +82,25 @@
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
   #locBtn.following { background:#00e676; color:#000; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
-  #copyBtn { background:#000; color:#fff; border-color:#888; }
 
-  /* 🚪 方形離開按鈕（置於 SOS 上方，放大字體無符號） */
-  #leaveBtn {
-    width: 62px; height: 44px; border-radius: 8px; border: 2.5px solid #ff5252;
-    background: #1a0505; color: #ff5252; font-size: 16px; font-weight: 900;
+  /* 📄 方形「邀請」按鈕（保持原有符號與文字） */
+  #copyBtn {
+    width: 62px; height: 44px; border-radius: 8px; border: 2px solid #888;
+    background: #111; color: #fff; font-size: 14px; font-weight: bold;
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
     display: flex; align-items: center; justify-content: center;
-    transition: .15s; margin-bottom: 2px;
+    flex-direction: column; gap: 2px; line-height: 1.1;
+    transition: .15s;
+  }
+  #copyBtn:active { transform: scale(0.94); background: #333; }
+
+  /* 🚪 方形「離開」按鈕（與 SOS 拉開一個按鈕寬度以上的距離） */
+  #leaveBtn {
+    width: 62px; height: 44px; border-radius: 8px; border: 2.5px solid #ff5252;
+    background: #1a0505; color: #ff5252; font-size: 15px; font-weight: 900;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center;
+    transition: .15s; margin-bottom: 24px; /* 拉開與下方 SOS 的距離 */
   }
   #leaveBtn:active { transform: scale(0.94); background: #3a0d0d; }
 
@@ -292,13 +302,13 @@
     </div>
   </div>
 
-  <!-- 右側控制按鈕組 (離開按鈕置於 SOS 上方，採無符號方形放大設計) -->
+  <!-- 右側控制按鈕組 (邀請在離開上方，離開與SOS拉開舒適距離) -->
   <div class="control-group">
+    <button id="copyBtn" title="複製邀請連結">🔗 邀請</button>
     <button id="leaveBtn" title="離開活動">離開</button>
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:10px;" id="locTxt">定位</span></button>
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:10px;">找地點</span></button>
-    <button id="copyBtn" class="ctrl-btn" title="複製邀請連結">🔗<span style="font-size:10px;">邀請</span></button>
   </div>
 
   <div id="panel">
