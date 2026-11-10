@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (介面完美防遮擋優化版)</title>
+<title>揪團定位 · 活動代號地圖 (完美層次防遮擋版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient><filter id='shadow'><feDropShadow dx='0' dy='12' stdDeviation='12' flood-color='%23000' flood-opacity='0.4'/></filter></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><g filter='url(%23shadow)'><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z' fill='%23ffffff'/><circle cx='256' cy='184' r='32' fill='%23db2777'/></g></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z' fill='%23ffffff'/><circle cx='256' cy='184' r='32' fill='%23db2777'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z' fill='%23ffffff'/></svg>">
 <link rel="manifest" href="data:application/manifest+json;utf8,{
   %22name%22: %22揪團定位 App%22,
   %22short_name%22: %22揪團定位%22,
@@ -153,11 +153,11 @@
     font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 8px;
   }
 
-  /* 🎯 集合點膠囊橫條 (完美定位在底部面板上方，絕對不被覆蓋) */
+  /* 🎯 集合點膠囊橫條 (精準定位於同伴面板上方，絕不互相覆蓋) */
   #targetBanner {
-    position: absolute; left: 16px; right: 16px; bottom: 72px; z-index: 1005;
+    position: absolute; left: 16px; right: 16px; bottom: 78px; z-index: 1005;
     background: rgba(17, 17, 17, 0.95); border: 2px solid #ffeb3b; border-radius: 30px;
-    padding: 8px 16px; color: #fff; display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; color: #fff; display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 6px 20px rgba(0,0,0,0.85); backdrop-filter: blur(6px);
   }
   #targetBanner .t-info { font-size: 14px; font-weight: bold; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%; }
@@ -173,7 +173,7 @@
     border-radius: 20px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
 
-  /* 底部面板 (固定在畫面最下方) */
+  /* 底部面板 (同伴列表固定貼齊畫面最底部) */
   #panel{
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000;
     background: #111;
@@ -248,7 +248,7 @@
     max-width:85vw;
   }
   #toast{
-    position:fixed;left:50%;bottom:120px;transform:translate(-50%,20px);z-index:3000;
+    position:fixed;left:50%;bottom:130px;transform:translate(-50%,20px);z-index:3000;
     background:#ffeb3b;color:#000;padding:16px 24px;border-radius:8px;font-weight:bold;
     font-size:18px;opacity:0;transition:.25s;pointer-events:none;
     border:3px solid #000;max-width:90vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5);
@@ -307,7 +307,7 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條 (已優化位置，浮在面板上方不被遮擋) -->
+  <!-- 🎯 集合點膠囊橫條 (獨立浮在同伴面板上方，絕不被覆蓋) -->
   <div id="targetBanner" class="hidden">
     <div class="t-info"><span id="targetName">集合點</span> <span id="targetDist">計算中...</span></div>
     <div class="target-banner-actions">
@@ -325,7 +325,7 @@
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:10px;">找地點</span></button>
   </div>
 
-  <!-- 底部同伴面板 -->
+  <!-- 底部同伴面板 (固定在最下方) -->
   <div id="panel">
     <div class="panel-head" id="panelToggle">
       <span>👥 同伴列表（長按地圖或點右側「找地點」設集合點）</span>
