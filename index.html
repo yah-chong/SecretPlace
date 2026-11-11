@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (搜尋結果帶距離優化版)</title>
+<title>揪團定位 · 活動代號地圖 (新成員自動同步集合點版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -155,7 +155,7 @@
     font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 8px;
   }
 
-  /* 🎯 集合點膠囊橫條 (獨立浮在同伴面板上方，絕不被覆蓋) */
+  /* 🎯 集合點膠囊橫條 */
   #targetBanner {
     position: absolute; left: 16px; right: 16px; bottom: 78px; z-index: 1005;
     background: rgba(17, 17, 17, 0.95); border: 2px solid #ffeb3b; border-radius: 30px;
@@ -175,7 +175,7 @@
     border-radius: 20px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
 
-  /* 底部面板 (同伴列表固定貼齊畫面最底部) */
+  /* 底部面板 */
   #panel{
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000;
     background: #111;
@@ -475,7 +475,7 @@
     state.line = null;
   }
 
-  /* ================= 搜尋地點設定集合點（帶距離計算） ================= */
+  /* ================= 搜尋地點設定集合點 ================= */
   async function searchLocation(query) {
     if (!query.trim()) return toast('請輸入要搜尋的地點名稱');
     toast('正在檢索地點...');
@@ -500,7 +500,6 @@
         const itemLat = parseFloat(item.lat);
         const itemLng = parseFloat(item.lon);
 
-        // 計算與自己的距離
         let distStr = '距離未知';
         if (state.myPos) {
           const distM = haversine(state.myPos, { lat: itemLat, lng: itemLng });
@@ -734,7 +733,7 @@
     sendPos();
   }
 
-  /* ================= MQTT 即時同步 ================= */
+  /* ================= MQTT 即時同步（含新成員自動同步集合點） ================= */
   function send(type, extra) {
     if (!state.client || !state.client.connected) return;
     const msg = Object.assign({
@@ -775,7 +774,14 @@
       if (!m || !m.id) return;
 
       if (m.id !== state.id) {
-        if (m.type === 'hello') { sendPos(); return; }          
+        if (m.type === 'hello') { 
+          sendPos(); 
+          // 💡 優化：當有新同伴上線(hello)時，若我這裡有設定集合點，自動回傳給新成員同步！
+          if (state.targetPos) {
+            send('set_target', { lat: state.targetPos.lat, lng: state.targetPos.lng, name: state.targetName });
+          }
+          return; 
+        }          
         if (m.type === 'bye')   { removePeer(m.id); return; }   
         if (m.type === 'pos' && typeof m.lat === 'number' && typeof m.lng === 'number') {
           upsertPeer(m);
