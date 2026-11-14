@@ -123,7 +123,7 @@
   }
   #leaveBtn:active { transform: scale(0.94); background: #3a0d0d; }
 
-  /* 🔍 滿版無多餘外框彈出視窗 (專為手機小螢幕釋放空間設計) */
+  /* 🔍 滿版無多餘外框彈出視窗 */
   .modal-backdrop {
     position: absolute; inset: 0; z-index: 2000; background: #0a0a0a;
     display: flex; flex-direction: column;
@@ -257,7 +257,7 @@
   }
   .close-modal-btn:active { background: #444; }
 
-  /* 🎯 集合點膠囊橫條 */
+  /* 🎯 集合點膠囊橫條 (雙行完美排版，避免被按鈕遮蔽) */
   #targetBanner {
     position: absolute; left: 12px; right: 12px; bottom: 78px; z-index: 1005;
     background: rgba(12, 12, 12, 0.96); border: 2.5px solid #ff9100; border-radius: 16px;
@@ -276,11 +276,11 @@
   
   .target-banner-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   #targetBanner .t-btn {
-    background: #00e676; color: #000; border: none; padding: 9px 12px; border-radius: 10px;
+    background: #00e676; color: #000; border: none; padding: 9px 14px; border-radius: 10px;
     font-weight: 900; font-size: 15px; cursor: pointer; text-decoration: none; white-space: nowrap;
   }
   #targetBanner .t-clear {
-    background: #ff1744; color: #fff; border: none; padding: 9px 10px;
+    background: #ff1744; color: #fff; border: none; padding: 9px 12px;
     border-radius: 10px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
 
@@ -490,14 +490,14 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條 -->
+  <!-- 🎯 集合點膠囊橫條 (雙行完美排版：第一行地點+距離，第二行符號+時間) -->
   <div id="targetBanner" class="hidden" title="點擊重新調整集合點視野">
     <div class="t-info" id="focusTargetArea">
-      <div class="t-title-row">🚩 <span id="targetName">集合點</span></div>
-      <div class="t-walk-row" id="targetWalkEst">計算步行時間中...</div>
+      <div class="t-title-row">🚩 <span id="targetName">集合點</span> · <span id="targetDistVal" style="color:#ffeb3b;">--</span></div>
+      <div class="t-walk-row" id="targetWalkEst">計算時間中...</div>
     </div>
     <div class="target-banner-actions">
-      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">外部導航</a>
+      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">導航</a>
       <button id="clearTargetBtn" class="t-clear">取消</button>
     </div>
   </div>
@@ -582,23 +582,30 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  function fmtWalkEstimate(m) {
-    if (m == null) return '距離計算中...';
-    const distStr = m < 1000 ? `${Math.round(m)} 公尺` : `${(m / 1000).toFixed(1)} 公里`;
-    if (m < 30) return `就在身邊（約 ${Math.round(m)} 公尺）`;
-    const mins = Math.max(1, Math.round(m / 75));
-    if (mins >= 60) {
-      const hrs = Math.floor(mins / 60);
-      const remMins = mins % 60;
-      return `步行約 ${hrs} 小時 ${remMins > 0 ? remMins + ' 分鐘' : ''}（${distStr}）`;
-    }
-    return `步行約 ${mins} 分鐘（${distStr}）`;
-  }
-  
   function fmtDistSimple(m) {
-    if (m == null) return '距離未知';
+    if (m == null) return '未知距離';
     if (m < 1000) return Math.round(m) + ' 公尺';
     return (m / 1000).toFixed(1) + ' 公里';
+  }
+
+  // 最佳化評估：距離短用步行符號，距離長自動切換為開車符號與時間
+  function fmtTimeEstimate(m) {
+    if (m == null) return '計算中...';
+    const distStr = fmtDistSimple(m);
+    if (m > 2000) {
+      // 超過 2 公里評估開車時間 (假設車速約 30 km/h = 500米/分鐘)
+      const driveMins = Math.max(1, Math.round(m / 500));
+      return `🚗 開車約 ${driveMins} 分鐘（${distStr}）`;
+    } else {
+      // 2 公里內評估步行時間 (步行速度約 75米/分鐘)
+      const walkMins = Math.max(1, Math.round(m / 75));
+      if (walkMins >= 60) {
+        const hrs = Math.floor(walkMins / 60);
+        const rem = walkMins % 60;
+        return `🚶 步行約 ${hrs} 小時 ${rem > 0 ? rem + ' 分鐘' : ''}（${distStr}）`;
+      }
+      return `🚶 步行約 ${walkMins} 分鐘（${distStr}）`;
+    }
   }
 
   function ago(ts) {
@@ -1033,8 +1040,12 @@
     }
     banner.classList.remove('hidden');
     const dist = state.myPos ? haversine(state.myPos, state.targetPos) : null;
+    
+    // 第一行：顯示名稱與距離
     $('#targetName').textContent = state.targetName;
-    $('#targetWalkEst').textContent = fmtWalkEstimate(dist);
+    $('#targetDistVal').textContent = fmtDistSimple(dist);
+    // 第二行：依距離自動評估步行或開車，並使用符號替代
+    $('#targetWalkEst').textContent = fmtTimeEstimate(dist);
     
     const q = new URLSearchParams({
       api: '1', destination: state.targetPos.lat + ',' + state.targetPos.lng, travelmode: 'walking'
@@ -1043,7 +1054,6 @@
     $('#targetNavBtn').href = 'https://www.google.com/maps/dir/?' + q.toString();
   }
 
-  // 修改重點：集合點不在地圖中央畫出重複的虛線與黑底提示框，只調整地圖視野並保留底部橫條
   function focusTarget() {
     if (!state.targetPos || !state.map) return;
     clearLine();
@@ -1181,7 +1191,7 @@
             ${batTag}
           </div>
           ${statusBubble}
-          <div class="pwalk">🚶 ${fmtWalkEstimate(p.dist)}</div>
+          <div class="pwalk">🚶 ${fmtTimeEstimate(p.dist)}</div>
           <div class="pmeta">${timeStatus}</div>
         </div>
         <a class="navbtn" href="${navUrl(p)}" target="_blank" rel="noopener"
@@ -1200,7 +1210,7 @@
     icon.innerHTML = isHidden ? '▲ 展開' : '▼ 收合';
   });
 
-  // 點擊任一同伴時，依然會在兩點之間畫出點對點引導線與距離框
+  // 點擊任一同伴時，正常在兩點之間畫出點對點引導線與距離提示框
   window.focusPeer = function (id) {
     const p = peers.get(id);
     if (!p || !state.map) return;
@@ -1214,7 +1224,7 @@
       state.line = L.polyline([mine, target], {
         color: p.isSOS ? '#ff1744' : p.color, weight: 6, dashArray: '10 10', opacity: 0.95
       }).addTo(state.map)
-        .bindTooltip(`👤 ${esc(p.nickname)}<br>${fmtWalkEstimate(d)}`, {
+        .bindTooltip(`👤 ${esc(p.nickname)}<br>${fmtTimeEstimate(d)}`, {
           permanent: true, direction: 'center', className: 'lineTip'
         }).openTooltip();
       state.map.fitBounds(L.latLngBounds([mine, target]).pad(0.35));
