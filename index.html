@@ -9,7 +9,7 @@
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient><filter id='shadow'><feDropShadow dx='0' dy='12' stdDeviation='12' flood-color='%23000' flood-opacity='0.4'/></filter></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><g filter='url(%23shadow)'><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z' fill='%23ffffff'/><circle cx='256' cy='184' r='32' fill='%23db2777'/></g></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z' fill='%23ffffff'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%234f46e5'/><stop offset='50%' stop-color='%237c3aed'/><stop offset='100%' stop-color='%23db2777'/></linearGradient></defs><rect width='512' height='512' rx='110' fill='url(%23bg)'/><path d='M256 60C170.9 60 102 128.9 102 214c0 105.4 125.4 223.7 130.6 228.5 2.1 1.9 4.9 2.9 7.4 2.9s5.3-1 7.4-2.9C284.6 437.7 410 319.4 410 214C410 128.9 341.1 60 256 60zm0 184c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60 z' fill='%23ffffff'/></svg>">
 <link rel="manifest" href="data:application/manifest+json;utf8,{
   %22name%22: %22揪團定位 App%22,
   %22short_name%22: %22揪團定位%22,
@@ -490,7 +490,7 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條 (雙行完美排版：第一行地點+距離，第二行符號+時間) -->
+  <!-- 🎯 集合點膠囊橫條 -->
   <div id="targetBanner" class="hidden" title="點擊重新調整集合點視野">
     <div class="t-info" id="focusTargetArea">
       <div class="t-title-row">🚩 <span id="targetName">集合點</span> · <span id="targetDistVal" style="color:#ffeb3b;">--</span></div>
@@ -553,7 +553,8 @@
     batteryLevel: null,
     isCharging: false,
     myStatus: '',
-    itinerary: []       // 📅 今日行程打卡站點清單 [{id, name, lat, lng}]
+    itinerary: [],
+    itineraryUpdatedAt: 0 // 時間戳確保最新清單優先
   };
   const peers = new Map();   
 
@@ -588,16 +589,13 @@
     return (m / 1000).toFixed(1) + ' 公里';
   }
 
-  // 最佳化評估：距離短用步行符號，距離長自動切換為開車符號與時間
   function fmtTimeEstimate(m) {
     if (m == null) return '計算中...';
     const distStr = fmtDistSimple(m);
     if (m > 2000) {
-      // 超過 2 公里評估開車時間 (假設車速約 30 km/h = 500米/分鐘)
       const driveMins = Math.max(1, Math.round(m / 500));
       return `🚗 開車約 ${driveMins} 分鐘（${distStr}）`;
     } else {
-      // 2 公里內評估步行時間 (步行速度約 75米/分鐘)
       const walkMins = Math.max(1, Math.round(m / 75));
       if (walkMins >= 60) {
         const hrs = Math.floor(walkMins / 60);
@@ -615,6 +613,37 @@
     const m = Math.floor(s / 60);
     if (m < 60) return m + ' 分鐘前';
     return Math.floor(m / 60) + ' 小時前';
+  }
+
+  /* ================= 本地快取備援機制 ================= */
+  function saveLocalCache() {
+    if (!state.code) return;
+    try {
+      const cache = {
+        itinerary: state.itinerary,
+        itineraryUpdatedAt: state.itineraryUpdatedAt,
+        targetPos: state.targetPos,
+        targetName: state.targetName
+      };
+      localStorage.setItem('geoact_cache_' + state.code, JSON.stringify(cache));
+    } catch (e) {}
+  }
+
+  function loadLocalCache() {
+    if (!state.code) return;
+    try {
+      const raw = localStorage.getItem('geoact_cache_' + state.code);
+      if (!raw) return;
+      const cache = JSON.parse(raw);
+      if (Array.isArray(cache.itinerary) && cache.itinerary.length > 0) {
+        state.itinerary = cache.itinerary;
+        state.itineraryUpdatedAt = cache.itineraryUpdatedAt || Date.now();
+        renderItineraryList();
+      }
+      if (cache.targetPos && typeof cache.targetPos.lat === 'number') {
+        setTargetPos(cache.targetPos.lat, cache.targetPos.lng, cache.targetName || '集合點', false);
+      }
+    } catch (e) {}
   }
 
   /* ================= 📅 今日行程管理、順序調整與一鍵切換 ================= */
@@ -662,8 +691,10 @@
     const temp = state.itinerary[idx];
     state.itinerary[idx] = state.itinerary[targetIdx];
     state.itinerary[targetIdx] = temp;
+    state.itineraryUpdatedAt = Date.now();
 
-    broadcastItinerary();
+    saveLocalCache();
+    broadcastItinerary(true);
     renderItineraryList();
     toast(`✅ 已調整為「第 ${targetIdx + 1} 站」`);
   };
@@ -678,14 +709,18 @@
 
   window.removeItineraryStop = function(idx) {
     state.itinerary.splice(idx, 1);
-    broadcastItinerary();
+    state.itineraryUpdatedAt = Date.now();
+    saveLocalCache();
+    broadcastItinerary(true);
     renderItineraryList();
     toast('已移除該行程站點');
   };
 
   function addItineraryStop(name, lat, lng) {
     state.itinerary.push({ id: 's' + Math.random().toString(36).slice(2, 8), name, lat, lng });
-    broadcastItinerary();
+    state.itineraryUpdatedAt = Date.now();
+    saveLocalCache();
+    broadcastItinerary(true);
     renderItineraryList();
     if (state.itinerary.length === 1 && !state.targetPos) {
       setTargetPos(lat, lng, `第 1 站：${name}`, true);
@@ -693,11 +728,15 @@
     toast(`✅ 已加入行程：${name}`);
   }
 
-  function broadcastItinerary() {
-    if (state.client && state.client.connected) {
-      const msg = JSON.stringify({ type: 'sync_itinerary', list: state.itinerary });
-      state.client.publish(state.itineraryTopic, msg, { qos: 0, retain: true });
-    }
+  function broadcastItinerary(useRetain) {
+    if (!state.client || !state.client.connected) return;
+    const msg = JSON.stringify({
+      type: 'sync_itinerary',
+      list: state.itinerary,
+      updatedAt: state.itineraryUpdatedAt,
+      senderId: state.id
+    });
+    state.client.publish(state.itineraryTopic, msg, { qos: 0, retain: !!useRetain });
   }
 
   async function searchItineraryLocation(query) {
@@ -878,6 +917,9 @@
     });
 
     peers.forEach(p => addPeerMarker(p));     
+    if (state.targetPos && !state.targetMarker) {
+      setTargetPos(state.targetPos.lat, state.targetPos.lng, state.targetName, false);
+    }
   }
 
   function iconFor(nickname, color, isMe, isSOS, isOffline, statusText) {
@@ -987,7 +1029,7 @@
     }
   }
 
-  function setTargetPos(lat, lng, name, broadcast) {
+  function setTargetPos(lat, lng, name, broadcast, useRetain = true) {
     state.targetPos = { lat, lng };
     state.targetName = name || '集合點';
     if (!state.targetMarker && state.map) {
@@ -1004,14 +1046,17 @@
       state.targetMarker.setLatLng([lat, lng]);
     }
 
+    saveLocalCache();
     updateTargetUI();
     renderItineraryList();
     
     if (broadcast && state.client && state.client.connected) {
       const msg = JSON.stringify({ type: 'set_target', lat, lng, name: state.targetName, id: state.id });
-      state.client.publish(state.targetTopic, msg, { qos: 0, retain: true });
-      toast('🎯 已設定全體集合點：' + state.targetName);
-      focusTarget();
+      state.client.publish(state.targetTopic, msg, { qos: 0, retain: !!useRetain });
+      if (useRetain) {
+        toast('🎯 已設定全體集合點：' + state.targetName);
+        focusTarget();
+      }
     }
   }
 
@@ -1022,6 +1067,7 @@
       state.map.removeLayer(state.targetMarker);
       state.targetMarker = null;
     }
+    saveLocalCache();
     clearLine();
     updateTargetUI();
     renderItineraryList();
@@ -1041,10 +1087,8 @@
     banner.classList.remove('hidden');
     const dist = state.myPos ? haversine(state.myPos, state.targetPos) : null;
     
-    // 第一行：顯示名稱與距離
     $('#targetName').textContent = state.targetName;
     $('#targetDistVal').textContent = fmtDistSimple(dist);
-    // 第二行：依距離自動評估步行或開車，並使用符號替代
     $('#targetWalkEst').textContent = fmtTimeEstimate(dist);
     
     const q = new URLSearchParams({
@@ -1210,7 +1254,6 @@
     icon.innerHTML = isHidden ? '▲ 展開' : '▼ 收合';
   });
 
-  // 點擊任一同伴時，正常在兩點之間畫出點對點引導線與距離提示框
   window.focusPeer = function (id) {
     const p = peers.get(id);
     if (!p || !state.map) return;
@@ -1271,7 +1314,7 @@
     sendPos();
   }
 
-  /* ================= MQTT 即時同步 ================= */
+  /* ================= MQTT 即時同步 (自動無縫帶入舊資料) ================= */
   function send(type, extra) {
     if (!state.client || !state.client.connected) return;
     const msg = Object.assign({
@@ -1320,18 +1363,31 @@
     state.client.on('message', (topic, buf) => {
       const payload = buf.toString();
 
+      // 接收行程清單同步
       if (topic === state.itineraryTopic) {
         if (!payload) return;
         try {
           const t = JSON.parse(payload);
           if (t && t.type === 'sync_itinerary' && Array.isArray(t.list)) {
-            state.itinerary = t.list;
-            renderItineraryList();
+            if (t.senderId === state.id) return;
+            const incomingTime = t.updatedAt || 1;
+            // 只要對方的行程資料較新，或本地目前為空，就自動無條件帶入
+            if (incomingTime >= state.itineraryUpdatedAt || state.itinerary.length === 0) {
+              const hadEmpty = state.itinerary.length === 0 && t.list.length > 0;
+              state.itinerary = t.list;
+              state.itineraryUpdatedAt = incomingTime;
+              saveLocalCache();
+              renderItineraryList();
+              if (hadEmpty) {
+                toast(`📅 已自動帶入今日行程（共 ${t.list.length} 站）`);
+              }
+            }
           }
         } catch(e){}
         return;
       }
 
+      // 接收集合點同步
       if (topic === state.targetTopic) {
         if (!payload) {
           clearTargetPos(false);
@@ -1340,6 +1396,7 @@
         try {
           const t = JSON.parse(payload);
           if (t && t.type === 'set_target' && typeof t.lat === 'number') {
+            if (t.id === state.id) return;
             setTargetPos(t.lat, t.lng, t.name, false);
           }
         } catch(e){}
@@ -1351,8 +1408,25 @@
       if (!m || !m.id) return;
 
       if (m.id !== state.id) {
-        if (m.type === 'hello') { sendPos(); return; }          
-        if (m.type === 'bye')   { removePeer(m.id); return; }   
+        // 當新夥伴上線發送 hello 時，線上任何人直接自動把目前的行程與集合點推播給新夥伴！
+        if (m.type === 'hello') {
+          sendPos();
+          if (state.itinerary.length > 0) {
+            broadcastItinerary(false);
+          }
+          if (state.targetPos) {
+            const targetMsg = JSON.stringify({
+              type: 'set_target',
+              lat: state.targetPos.lat,
+              lng: state.targetPos.lng,
+              name: state.targetName,
+              id: state.id
+            });
+            state.client.publish(state.targetTopic, targetMsg, { qos: 0, retain: false });
+          }
+          return;
+        }
+        if (m.type === 'bye') { removePeer(m.id); return; }   
         if (m.type === 'pos' && typeof m.lat === 'number' && typeof m.lng === 'number') {
           upsertPeer(m);
         }
@@ -1433,6 +1507,8 @@
     $('#topCode').textContent = code;
     $('#joinScreen').classList.add('hidden');
     $('#mapScreen').classList.remove('hidden');
+
+    loadLocalCache();
 
     state.joined = true;
     initBatteryMonitor();
