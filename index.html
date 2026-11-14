@@ -173,7 +173,7 @@
     padding: 4px 10px; border-radius: 6px; white-space: nowrap; border: 1.5px solid #00e676; flex-shrink: 0;
   }
 
-  /* 📅 行程清單卡片樣式 (無多餘框線、大字高對比、完整名稱顯示、上下排序按鈕) */
+  /* 📅 行程清單卡片樣式 */
   .itinerary-list-container {
     flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     display: flex; flex-direction: column; gap: 10px;
@@ -491,7 +491,7 @@
   </div>
 
   <!-- 🎯 集合點膠囊橫條 -->
-  <div id="targetBanner" class="hidden" title="點擊檢視行程清單或在地圖畫引導線">
+  <div id="targetBanner" class="hidden" title="點擊重新調整集合點視野">
     <div class="t-info" id="focusTargetArea">
       <div class="t-title-row">🚩 <span id="targetName">集合點</span></div>
       <div class="t-walk-row" id="targetWalkEst">計算步行時間中...</div>
@@ -652,7 +652,6 @@
     const targetIdx = idx + direction;
     if (targetIdx < 0 || targetIdx >= state.itinerary.length) return;
     
-    // 交換兩個站點的位置
     const temp = state.itinerary[idx];
     state.itinerary[idx] = state.itinerary[targetIdx];
     state.itinerary[targetIdx] = temp;
@@ -1044,6 +1043,7 @@
     $('#targetNavBtn').href = 'https://www.google.com/maps/dir/?' + q.toString();
   }
 
+  // 修改重點：集合點不在地圖中央畫出重複的虛線與黑底提示框，只調整地圖視野並保留底部橫條
   function focusTarget() {
     if (!state.targetPos || !state.map) return;
     clearLine();
@@ -1052,13 +1052,6 @@
 
     if (state.myPos) {
       const mine = [state.myPos.lat, state.myPos.lng];
-      const d = haversine(state.myPos, state.targetPos);
-      state.line = L.polyline([mine, target], {
-        color: '#ff9100', weight: 6, dashArray: '10 10', opacity: 0.95
-      }).addTo(state.map)
-        .bindTooltip(`🚩 前往${esc(state.targetName)}<br>${fmtWalkEstimate(d)}`, {
-          permanent: true, direction: 'center', className: 'lineTip'
-        }).openTooltip();
       state.map.fitBounds(L.latLngBounds([mine, target]).pad(0.35));
     } else {
       state.map.setView(target, 16);
@@ -1207,6 +1200,7 @@
     icon.innerHTML = isHidden ? '▲ 展開' : '▼ 收合';
   });
 
+  // 點擊任一同伴時，依然會在兩點之間畫出點對點引導線與距離框
   window.focusPeer = function (id) {
     const p = peers.get(id);
     if (!p || !state.map) return;
