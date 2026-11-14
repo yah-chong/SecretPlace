@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (螢幕恆亮導航級優化版)</title>
+<title>揪團定位 · 活動代號地圖 (步行時間預估 + 低電量離線警示版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -155,24 +155,31 @@
     font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 8px;
   }
 
-  /* 🎯 集合點膠囊橫條 */
+  /* 🎯 集合點膠囊橫條（含步行時間預估與點擊畫線引導） */
   #targetBanner {
     position: absolute; left: 16px; right: 16px; bottom: 78px; z-index: 1005;
-    background: rgba(17, 17, 17, 0.95); border: 2px solid #ffeb3b; border-radius: 30px;
-    padding: 10px 16px; color: #fff; display: flex; align-items: center; justify-content: space-between;
+    background: rgba(17, 17, 17, 0.96); border: 2px solid #ffeb3b; border-radius: 20px;
+    padding: 10px 14px; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 8px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.85); backdrop-filter: blur(6px);
   }
-  #targetBanner .t-info { font-size: 14px; font-weight: bold; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%; }
-  #targetBanner .t-info span { color: #ffeb3b; font-size: 15px; font-weight: 900; }
+  #targetBanner .t-info { 
+    flex: 1; min-width: 0; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+  }
+  #targetBanner .t-title-row {
+    font-size: 15px; font-weight: 900; color: #ffeb3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #targetBanner .t-walk-row {
+    font-size: 13px; font-weight: bold; color: #00e676; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   
-  .target-banner-actions { display: flex; gap: 8px; align-items: center; }
+  .target-banner-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   #targetBanner .t-btn {
-    background: #00e676; color: #000; border: none; padding: 6px 14px; border-radius: 20px;
-    font-weight: 900; font-size: 14px; cursor: pointer; text-decoration: none; white-space: nowrap;
+    background: #00e676; color: #000; border: none; padding: 8px 12px; border-radius: 14px;
+    font-weight: 900; font-size: 13px; cursor: pointer; text-decoration: none; white-space: nowrap;
   }
   #targetBanner .t-clear {
-    background: #ff1744; color: #fff; border: none; padding: 6px 12px;
-    border-radius: 20px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
+    background: #ff1744; color: #fff; border: none; padding: 8px 10px;
+    border-radius: 14px; font-size: 13px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
 
   /* 底部面板 */
@@ -195,24 +202,30 @@
   #peerList{
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    max-height: 35vh;
+    max-height: 36vh;
   }
   
   .peer{
-    display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 12px;
+    display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
     background: #222; border: 2px solid #333; margin-bottom: 8px; cursor: pointer; transition: .15s;
   }
   .peer.sos-active { border-color: #ff1744; background: #3a0d0d; animation: alertFlash 1s infinite alternate; }
+  .peer.offline { opacity: 0.72; border-color: #666; background: #1a1a1a; }
   .peer:active{ background: #333; border-color: #ffeb3b; }
   .pdot{ width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto; border: 2px solid #fff; }
   .pinfo{ flex: 1; min-width: 0; }
   
-  .pname{ color: #fff; font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .pname{ color: #fff; font-size: 19px; font-weight: 900; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
   .sos-tag { background: #ff1744; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-  .pmeta{ color: #bbb; font-size: 14px; font-weight: bold; margin-top: 4px; }
+  .offline-tag { background: #ff9100; color: #000; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: 900; }
+  .bat-low-tag { background: #d50000; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+  .bat-ok-tag { background: #333; color: #00e676; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #444; }
+  
+  .pmeta{ color: #bbb; font-size: 14px; font-weight: bold; margin-top: 5px; line-height: 1.4; }
+  .pwalk{ color: #ffeb3b; font-size: 13px; font-weight: bold; margin-top: 2px; }
   .navbtn{
     background: #00e676; color: #000; text-decoration: none; font-size: 15px; font-weight: 900;
-    padding: 10px 16px; border-radius: 8px; flex: 0 0 auto; border: 2px solid #000;
+    padding: 10px 14px; border-radius: 8px; flex: 0 0 auto; border: 2px solid #000;
   }
   
   .empty{ color: #ccc; font-size: 16px; font-weight: bold; padding: 14px 10px; text-align: center; line-height: 1.6; }
@@ -231,6 +244,8 @@
   .pin.me .dot{box-shadow:0 0 0 4px rgba(255,255,255,.9),0 0 0 12px rgba(0,230,118,.5)}
   .pin.sos .dot { background:#ff1744!important; animation: sosPulse 0.8s infinite alternate; }
   .pin.sos .name { background:#ff1744; color:#fff; border-color:#fff; }
+  .pin.offline .dot { background:#888!important; border-color:#ccc; }
+  .pin.offline .name { background:#333; color:#ffcc80; border-color:#ff9100; }
 
   .target-pin {
     font-size: 32px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
@@ -238,8 +253,9 @@
   }
 
   .leaflet-tooltip.lineTip{
-    background:#000;color:#ffeb3b;border:2px solid #fff;font-size:16px;font-weight:900;
-    padding:6px 12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.6);
+    background:#000;color:#ffeb3b;border:2px solid #fff;font-size:15px;font-weight:900;
+    padding:6px 12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.7);
+    text-align:center;line-height:1.4;
   }
   .leaflet-tooltip.lineTip::before{display:none}
 
@@ -250,7 +266,7 @@
     max-width:85vw;
   }
   #toast{
-    position:fixed;left:50%;bottom:130px;transform:translate(-50%,20px);z-index:3000;
+    position:fixed;left:50%;bottom:135px;transform:translate(-50%,20px);z-index:3000;
     background:#ffeb3b;color:#000;padding:16px 24px;border-radius:8px;font-weight:bold;
     font-size:18px;opacity:0;transition:.25s;pointer-events:none;
     border:3px solid #000;max-width:90vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5);
@@ -273,7 +289,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、搜尋地點設定集合點與一鍵 SOS 求助。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、步行時間預估、低電量與斷線提醒。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -309,12 +325,15 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條 -->
+  <!-- 🎯 集合點膠囊橫條（點擊文字區可在地圖畫出引導線） -->
   <div id="targetBanner" class="hidden">
-    <div class="t-info"><span id="targetName">集合點</span> <span id="targetDist">計算中...</span></div>
+    <div class="t-info" id="focusTargetArea" title="點擊在地圖畫出引導線">
+      <div class="t-title-row">🚩 <span id="targetName">集合點</span></div>
+      <div class="t-walk-row" id="targetWalkEst">計算步行時間中...</div>
+    </div>
     <div class="target-banner-actions">
-      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">一鍵導航</a>
-      <button id="clearTargetBtn" class="t-clear">取消集合點</button>
+      <a id="targetNavBtn" class="t-btn" href="#" target="_blank" rel="noopener">外部導航</a>
+      <button id="clearTargetBtn" class="t-clear">取消</button>
     </div>
   </div>
 
@@ -330,7 +349,7 @@
   <!-- 底部同伴面板 -->
   <div id="panel">
     <div class="panel-head" id="panelToggle">
-      <span>👥 同伴列表（長按地圖或點右側「找地點」設集合點）</span>
+      <span>👥 同伴列表（點同伴或集合點看步行引導線）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
     </div>
     <div id="peerList"></div>
@@ -350,7 +369,8 @@
   const COLORS = ['#ff5252','#448aff','#ffb300','#00e676','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
   const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   
   const TOPIC_PREFIX = 'geoact/v1/';
-  const PING_MS  = 15 * 1000;   
+  const PING_MS  = 15 * 1000;      // 每 15 秒主動發送一次心跳與定位
+  const OFFLINE_MS = 60 * 1000;    // 超過 60 秒 (1 分鐘) 未更新視為訊號中斷
 
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
@@ -362,7 +382,9 @@
     targetPos: null,    
     targetName: '集合點',
     targetMarker: null,
-    wakeLock: null      // 💡 螢幕恆亮鎖定物件
+    wakeLock: null,
+    batteryLevel: null,  // 0~100 整數
+    isCharging: false
   };
   const peers = new Map();   
 
@@ -391,12 +413,18 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  function fmtDistSemantic(m) {
-    if (m == null) return '距離未知';
-    if (m < 30) return `就在你附近 (約 ${Math.round(m)} 公尺)`;
-    if (m < 100) return `相當接近 (約 ${Math.round(m)} 公尺)`;
-    if (m < 1000) return `步行距離 (約 ${Math.round(m)} 公尺)`;
-    return `距離較遠 (${(m / 1000).toFixed(m < 10000 ? 2 : 1)} 公里)`;
+  /* 💡 計算步行預估時間與距離格式化（平均戶外步行速度約 75 公尺/分鐘） */
+  function fmtWalkEstimate(m) {
+    if (m == null) return '距離計算中...';
+    const distStr = m < 1000 ? `${Math.round(m)} 公尺` : `${(m / 1000).toFixed(1)} 公里`;
+    if (m < 30) return `就在身邊（約 ${Math.round(m)} 公尺）`;
+    const mins = Math.max(1, Math.round(m / 75));
+    if (mins >= 60) {
+      const hrs = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      return `步行約 ${hrs} 小時 ${remMins > 0 ? remMins + ' 分鐘' : ''}（${distStr}）`;
+    }
+    return `步行約 ${mins} 分鐘（${distStr}）`;
   }
   
   function fmtDistSimple(m) {
@@ -414,7 +442,29 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
-  /* ================= 💡 螢幕恆亮控制 (Screen Wake Lock API) ================= */
+  /* ================= 🔋 手機電池電量監控 ================= */
+  async function initBatteryMonitor() {
+    if (!('getBattery' in navigator)) return;
+    try {
+      const bat = await navigator.getBattery();
+      const updateBat = () => {
+        const oldLvl = state.batteryLevel;
+        state.batteryLevel = Math.round(bat.level * 100);
+        state.isCharging = bat.charging;
+        
+        // 若電量剛跌破 20% 且未充電，立刻發送低電量通知
+        if (state.batteryLevel <= 20 && !state.isCharging && (oldLvl === null || oldLvl > 20)) {
+          toast(`🪫 您的手機電量低於 ${state.batteryLevel}%，已通知同伴！`, 5000);
+          sendPos();
+        }
+      };
+      updateBat();
+      bat.addEventListener('levelchange', updateBat);
+      bat.addEventListener('chargingchange', updateBat);
+    } catch (e) {}
+  }
+
+  /* ================= 💡 螢幕恆亮控制 ================= */
   async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
     try {
@@ -423,12 +473,9 @@
       state.wakeLock.addEventListener('release', () => {
         state.wakeLock = null;
       });
-    } catch (err) {
-      // 忽略因瀏覽器政策暫時拒絕的錯誤
-    }
+    } catch (err) {}
   }
 
-  // 監聽頁面可見度：切回地圖時自動重新請求恆亮，切到背景時自動釋放
   document.addEventListener('visibilitychange', async () => {
     if (state.joined && document.visibilityState === 'visible') {
       await requestWakeLock();
@@ -455,15 +502,20 @@
     peers.forEach(p => addPeerMarker(p));     
   }
 
-  function iconFor(nickname, color, isMe, isSOS) {
+  function iconFor(nickname, color, isMe, isSOS, isOffline) {
     const sosClass = isSOS ? ' sos' : '';
     const meClass = isMe ? ' me' : '';
+    const offClass = (!isMe && isOffline) ? ' offline' : '';
+    let prefix = '';
+    if (isSOS) prefix = '🆘 ';
+    else if (!isMe && isOffline) prefix = '⚠️ ';
+
     return L.divIcon({
       className: '',
       html:
-        '<div class="pin' + meClass + sosClass + '">' +
+        '<div class="pin' + meClass + sosClass + offClass + '">' +
           '<div class="dot" style="background:' + (isSOS ? '#ff1744' : color) + '"></div>' +
-          '<div class="name">' + (isSOS ? '🆘 ' : '') + esc(nickname) + '</div>' +
+          '<div class="name">' + prefix + esc(nickname) + '</div>' +
         '</div>',
       iconSize: [0, 0],
       iconAnchor: [0, 0]
@@ -475,19 +527,20 @@
     const ll = [state.myPos.lat, state.myPos.lng];
     if (!state.meMarker) {
       state.meMarker = L.marker(ll, {
-        icon: iconFor(state.nickname, '#00e676', true, state.isSOS),
+        icon: iconFor(state.nickname, '#00e676', true, state.isSOS, false),
         zIndexOffset: 1000,
         interactive: false
       }).addTo(state.map);
     } else {
       state.meMarker.setLatLng(ll);
-      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS));
+      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS, false));
     }
   }
 
   function addPeerMarker(p) {
     if (!state.map || p.marker) return;
-    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS) })
+    const isOffline = (Date.now() - p.ts) > OFFLINE_MS;
+    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS, isOffline) })
       .addTo(state.map)
       .on('click', () => focusPeer(p.id));
   }
@@ -543,7 +596,7 @@
         div.addEventListener('click', () => {
           setTargetPos(itemLat, itemLng, mainTitle, true);
           $('#searchModal').classList.add('hidden');
-          if (state.map) state.map.setView([itemLat, itemLng], 16);
+          focusTarget();
         });
         resultsEl.appendChild(div);
       });
@@ -562,7 +615,9 @@
         iconSize: [32, 32],
         iconAnchor: [16, 32]
       });
-      state.targetMarker = L.marker([lat, lng], { icon: targetIcon }).addTo(state.map);
+      state.targetMarker = L.marker([lat, lng], { icon: targetIcon })
+        .addTo(state.map)
+        .on('click', focusTarget);
     } else if (state.targetMarker) {
       state.targetMarker.setLatLng([lat, lng]);
     }
@@ -573,6 +628,7 @@
       const msg = JSON.stringify({ type: 'set_target', lat, lng, name: state.targetName, id: state.id });
       state.client.publish(state.targetTopic, msg, { qos: 0, retain: true });
       toast('🎯 已設定全體集合點：' + state.targetName);
+      focusTarget();
     }
   }
 
@@ -583,6 +639,7 @@
       state.map.removeLayer(state.targetMarker);
       state.targetMarker = null;
     }
+    clearLine();
     updateTargetUI();
 
     if (broadcast && state.client && state.client.connected) {
@@ -600,7 +657,7 @@
     banner.classList.remove('hidden');
     const dist = state.myPos ? haversine(state.myPos, state.targetPos) : null;
     $('#targetName').textContent = state.targetName;
-    $('#targetDist').textContent = '(' + fmtDistSimple(dist) + ')';
+    $('#targetWalkEst').textContent = fmtWalkEstimate(dist);
     
     const q = new URLSearchParams({
       api: '1', destination: state.targetPos.lat + ',' + state.targetPos.lng, travelmode: 'walking'
@@ -609,31 +666,66 @@
     $('#targetNavBtn').href = 'https://www.google.com/maps/dir/?' + q.toString();
   }
 
+  /* 📍 在地圖上畫出前往集合點的直線步行引導線 */
+  function focusTarget() {
+    if (!state.targetPos || !state.map) return;
+    clearLine();
+    setFollowMode(false);
+    const target = [state.targetPos.lat, state.targetPos.lng];
+
+    if (state.myPos) {
+      const mine = [state.myPos.lat, state.myPos.lng];
+      const d = haversine(state.myPos, state.targetPos);
+      state.line = L.polyline([mine, target], {
+        color: '#ffeb3b', weight: 6, dashArray: '10 10', opacity: 0.95
+      }).addTo(state.map)
+        .bindTooltip(`🚩 前往${esc(state.targetName)}<br>${fmtWalkEstimate(d)}`, {
+          permanent: true, direction: 'center', className: 'lineTip'
+        }).openTooltip();
+      state.map.fitBounds(L.latLngBounds([mine, target]).pad(0.35));
+    } else {
+      state.map.setView(target, 16);
+    }
+  }
+
   /* ================= 同伴與 SOS 管理 ================= */
   function upsertPeer(m) {
     let p = peers.get(m.id);
     const wasSOS = p ? p.isSOS : false;
+    const wasLowBat = p ? (p.bat != null && p.bat <= 20 && !p.chg) : false;
 
     if (!p) {
       p = {
         id: m.id, nickname: m.nickname || '同伴',
         color: hashColor(m.id),
-        lat: m.lat, lng: m.lng, isSOS: !!m.isSOS, ts: Date.now(), marker: null
+        lat: m.lat, lng: m.lng, isSOS: !!m.isSOS,
+        bat: typeof m.bat === 'number' ? m.bat : null,
+        chg: !!m.chg,
+        ts: Date.now(), marker: null
       };
       peers.set(m.id, p);
       addPeerMarker(p);
     } else {
       if (m.nickname && m.nickname !== p.nickname) p.nickname = m.nickname;
-      p.lat = m.lat; p.lng = m.lng; p.isSOS = !!m.isSOS; p.ts = Date.now();
+      p.lat = m.lat; p.lng = m.lng; p.isSOS = !!m.isSOS;
+      if (typeof m.bat === 'number') p.bat = m.bat;
+      p.chg = !!m.chg;
+      p.ts = Date.now();
       if (p.marker) {
         p.marker.setLatLng([m.lat, m.lng]);
-        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS));
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, false));
       }
     }
 
     if (!wasSOS && p.isSOS) {
       toast('🚨 警告：' + p.nickname + ' 發出了 SOS 求救訊號！', 8000);
     }
+
+    const isLowBatNow = (p.bat != null && p.bat <= 20 && !p.chg);
+    if (!wasLowBat && isLowBatNow) {
+      toast(`🪫 注意：${p.nickname} 手機電量僅剩 ${p.bat}%！`, 6000);
+    }
+
     renderPeers();
   }
 
@@ -657,13 +749,22 @@
   function renderPeers() {
     const el = $('#peerList');
     const scrollTop = el.scrollTop;
+    const now = Date.now();
 
     $('#topCount').textContent = peers.size + 1;
 
-    const list = [...peers.values()].map(p => ({
-      ...p,
-      dist: state.myPos ? haversine(state.myPos, p) : null
-    })).sort((a, b) => {
+    const list = [...peers.values()].map(p => {
+      const isOffline = (now - p.ts) > OFFLINE_MS;
+      // 同步更新地圖標記的離線外觀
+      if (p.marker) {
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, isOffline));
+      }
+      return {
+        ...p,
+        isOffline,
+        dist: state.myPos ? haversine(state.myPos, p) : null
+      };
+    }).sort((a, b) => {
       if (a.isSOS !== b.isSOS) return a.isSOS ? -1 : 1; 
       return (a.dist ?? Infinity) - (b.dist ?? Infinity);
     });
@@ -673,19 +774,40 @@
       return;
     }
 
-    el.innerHTML = list.map(p => `
-      <div class="peer ${p.isSOS ? 'sos-active' : ''}" onclick="focusPeer('${p.id}')">
-        <span class="pdot" style="background:${p.isSOS ? '#ff1744' : p.color}"></span>
+    el.innerHTML = list.map(p => {
+      // 電池狀態標籤
+      let batTag = '';
+      if (p.bat !== null) {
+        if (p.bat <= 20 && !p.chg) {
+          batTag = `<span class="bat-low-tag">🪫 電量低 ${p.bat}%</span>`;
+        } else {
+          batTag = `<span class="bat-ok-tag">${p.chg ? '⚡' : '🔋'} ${p.bat}%</span>`;
+        }
+      }
+
+      // 離線斷訊狀態與時間文字
+      const offlineTag = p.isOffline ? `<span class="offline-tag">⚠️ 訊號中斷</span>` : '';
+      const timeStatus = p.isOffline 
+        ? `<span style="color:#ff9100;">訊號中斷中 (最後更新: ${ago(p.ts)})</span>` 
+        : `更新於 ${ago(p.ts)}`;
+
+      return `
+      <div class="peer ${p.isSOS ? 'sos-active' : ''} ${p.isOffline ? 'offline' : ''}" onclick="focusPeer('${p.id}')">
+        <span class="pdot" style="background:${p.isSOS ? '#ff1744' : (p.isOffline ? '#888' : p.color)}"></span>
         <div class="pinfo">
           <div class="pname">
             ${esc(p.nickname)}
             ${p.isSOS ? '<span class="sos-tag">SOS 求救中</span>' : ''}
+            ${offlineTag}
+            ${batTag}
           </div>
-          <div class="pmeta">${fmtDistSemantic(p.dist)} · ${ago(p.ts)}</div>
+          <div class="pwalk">🚶 ${fmtWalkEstimate(p.dist)}</div>
+          <div class="pmeta">${timeStatus}</div>
         </div>
         <a class="navbtn" href="${navUrl(p)}" target="_blank" rel="noopener"
            onclick="event.stopPropagation()">導航</a>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     el.scrollTop = scrollTop;
   }
@@ -709,16 +831,16 @@
       const mine = [state.myPos.lat, state.myPos.lng];
       const d = haversine(state.myPos, p);
       state.line = L.polyline([mine, target], {
-        color: p.isSOS ? '#ff1744' : p.color, weight: 5, dashArray: '8 10', opacity: 1
+        color: p.isSOS ? '#ff1744' : p.color, weight: 6, dashArray: '10 10', opacity: 0.95
       }).addTo(state.map)
-        .bindTooltip('距離 ' + fmtDistSemantic(d), {
+        .bindTooltip(`👤 ${esc(p.nickname)}<br>${fmtWalkEstimate(d)}`, {
           permanent: true, direction: 'center', className: 'lineTip'
         }).openTooltip();
       state.map.fitBounds(L.latLngBounds([mine, target]).pad(0.35));
     } else {
       state.map.setView(target, 17);
     }
-    toast('已標示與「' + p.nickname + '」的距離');
+    toast(`已顯示前往「${p.nickname}」的步行引導線`);
   };
 
   function setFollowMode(enable) {
@@ -769,7 +891,14 @@
 
   function sendPos() {
     if (!state.myPos) return;
-    send('pos', { lat: state.myPos.lat, lng: state.myPos.lng, acc: state.myPos.acc, isSOS: state.isSOS });
+    send('pos', { 
+      lat: state.myPos.lat, 
+      lng: state.myPos.lng, 
+      acc: state.myPos.acc, 
+      isSOS: state.isSOS,
+      bat: state.batteryLevel,
+      chg: state.isCharging
+    });
   }
 
   function setNet(on) { $('#netDot').classList.toggle('on', !!on); }
@@ -899,10 +1028,9 @@
     $('#mapScreen').classList.remove('hidden');
 
     state.joined = true;
+    initBatteryMonitor();
     startGeo();
     connectMQTT();
-    
-    // 💡 進入地圖後立即請求螢幕恆亮保持開啟
     requestWakeLock();
 
     setTimeout(() => {
@@ -923,7 +1051,6 @@
   function leave() {
     if (!confirm('確定要離開這個活動嗎？')) return;
     
-    // 💡 手動離開時主動釋放螢幕恆亮鎖定
     if (state.wakeLock !== null) {
       state.wakeLock.release().catch(() => {});
       state.wakeLock = null;
@@ -957,6 +1084,7 @@
   $('#locBtn').addEventListener('click', window.toggleFollowMe);
   $('#sosBtn').addEventListener('click', toggleSOS);
   $('#clearTargetBtn').addEventListener('click', () => clearTargetPos(true));
+  $('#focusTargetArea').addEventListener('click', focusTarget);
   
   $('#searchToggleBtn').addEventListener('click', () => {
     $('#searchModal').classList.remove('hidden');
@@ -981,7 +1109,7 @@
   })();
 
   setInterval(() => { sendPos(); }, PING_MS);        
-  setInterval(() => { renderPeers(); }, 10000); 
+  setInterval(() => { renderPeers(); }, 10000); // 每 10 秒檢查一次所有同伴的最後更新時間與離線狀態
 
 })();
 </script>
