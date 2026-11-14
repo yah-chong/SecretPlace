@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (步行時間預估 + 低電量離線警示版)</title>
+<title>揪團定位 · 活動代號地圖 (快速狀態標籤 + 短語音留言版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -64,7 +64,7 @@
   /* 頂部資訊列 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
-    display:flex;gap:8px;align-items:center;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     padding:12px;padding-top:calc(12px + env(safe-area-inset-top));
     pointer-events:none;background:linear-gradient(to bottom, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0));
   }
@@ -78,55 +78,61 @@
   .chip .lbl{color:#aaa;}
   .chip b{color:#ffeb3b;font-size:16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
   
+  #myStatusChip {
+    background:#1b2e1e; border-color:#00e676; color:#fff; max-width:92vw; cursor:pointer;
+  }
+  #myStatusChip span { color:#ffeb3b; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
   #netDot{width:10px;height:10px;border-radius:50%;background:#ff3d00;transition:.3s;flex-shrink:0;}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
 
   /* 🔍 右側控制按鈕組 */
   .control-group {
-    position:absolute;right:16px;top:38%;transform:translateY(-50%);z-index:1000;
-    display:flex;flex-direction:column;gap:10px; align-items:flex-end;
+    position:absolute;right:16px;top:40%;transform:translateY(-50%);z-index:1000;
+    display:flex;flex-direction:column;gap:9px; align-items:flex-end;
   }
   
   .ctrl-btn {
-    width:62px;height:62px;border-radius:50%;border:3px solid #fff;
-    background:#000;color:#fff;font-size:22px;font-weight:bold;cursor:pointer;
+    width:60px;height:60px;border-radius:50%;border:3px solid #fff;
+    background:#000;color:#fff;font-size:20px;font-weight:bold;cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;
-    flex-direction:column;line-height:1.2;
+    flex-direction:column;line-height:1.15;
   }
   .ctrl-btn:active{transform:scale(.94)}
   
-  #sosBtn { background:#d32f2f; border-color:#ff5252; color:#fff; animation: pulse 2s infinite; }
+  #sosBtn { background:#d32f2f; border-color:#ff5252; color:#fff; }
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
-  #locBtn.following { background:#00e676; color:#000; border-color:#fff; }
+  #statusToggleBtn { background:#00e676; color:#000; border-color:#fff; }
+  #locBtn.following { background:#2979ff; color:#fff; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
 
   #copyBtn {
-    width: 62px; height: 44px; border-radius: 8px; border: 2px solid #888;
-    background: #111; color: #fff; font-size: 14px; font-weight: bold;
+    width: 60px; height: 40px; border-radius: 8px; border: 2px solid #888;
+    background: #111; color: #fff; font-size: 13px; font-weight: bold;
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
     display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 2px; line-height: 1.1; transition: .15s;
+    transition: .15s;
   }
   #copyBtn:active { transform: scale(0.94); background: #333; }
 
   #leaveBtn {
-    width: 62px; height: 44px; border-radius: 8px; border: 2.5px solid #ff5252;
-    background: #1a0505; color: #ff5252; font-size: 15px; font-weight: 900;
+    width: 60px; height: 40px; border-radius: 8px; border: 2.5px solid #ff5252;
+    background: #1a0505; color: #ff5252; font-size: 14px; font-weight: 900;
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
     display: flex; align-items: center; justify-content: center;
-    transition: .15s; margin-bottom: 24px;
+    transition: .15s; margin-bottom: 10px;
   }
   #leaveBtn:active { transform: scale(0.94); background: #3a0d0d; }
 
-  /* 🔍 地點搜尋彈出視窗 */
-  #searchModal {
+  /* 🔍 地點搜尋 & 💬 狀態彈出視窗共用背景 */
+  .modal-backdrop {
     position: absolute; inset: 0; z-index: 2000; background: rgba(0,0,0,0.85);
     display: flex; flex-direction: column; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top));
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px); overflow-y: auto;
   }
-  .search-box-card {
+  .modal-card {
     background: #111; border: 2px solid #ffeb3b; border-radius: 16px; padding: 20px;
-    display: flex; flex-direction: column; gap: 12px; max-width: 500px; width: 100%; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 12px; max-width: 500px; width: 100%; margin: auto;
     box-shadow: 0 10px 30px rgba(0,0,0,0.9);
   }
   .search-input-row { display: flex; gap: 8px; }
@@ -150,12 +156,41 @@
   .search-item-sub { color: #aaa; font-size: 13px; font-weight: normal; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .search-item-dist { background: #333; color: #00e676; font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 6px; white-space: nowrap; border: 1px solid #555; flex-shrink: 0; }
 
-  .close-search {
-    background: #333; color: #fff; border: 1px solid #666; padding: 12px; border-radius: 10px;
-    font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; margin-top: 8px;
+  /* 💬 快速狀態按鈕與短語音留言樣式 */
+  .quick-status-btn {
+    width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #444;
+    background: #222; color: #fff; font-size: 19px; font-weight: 900;
+    text-align: left; cursor: pointer; transition: .15s; display: flex; align-items: center; gap: 10px;
+  }
+  .quick-status-btn:active { background: #333; border-color: #00e676; transform: scale(0.98); }
+  .quick-status-btn.clear-btn { border-color: #666; color: #ccc; justify-content: center; font-size: 16px; }
+
+  .voice-box {
+    background: #1a1a1a; border: 2px dashed #00e676; border-radius: 14px; padding: 14px;
+    display: flex; flex-direction: column; gap: 10px; margin-top: 4px;
+  }
+  .voice-btn {
+    width: 100%; padding: 16px; border-radius: 12px; border: none;
+    background: #ff1744; color: #fff; font-size: 20px; font-weight: 900;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 12px rgba(255,23,68,0.4); transition: .15s;
+  }
+  .voice-btn.recording {
+    background: #ffeb3b; color: #000; animation: alertFlash 0.6s infinite alternate;
+  }
+  .custom-msg-row { display: flex; gap: 8px; }
+  .custom-msg-row input { font-size: 17px; padding: 12px; border-radius: 10px; border: 2px solid #555; background: #222; color: #fff; flex: 1; }
+  .custom-msg-row button {
+    background: #00e676; color: #000; border: none; border-radius: 10px;
+    padding: 0 16px; font-weight: 900; font-size: 16px; cursor: pointer; white-space: nowrap;
   }
 
-  /* 🎯 集合點膠囊橫條（含步行時間預估與點擊畫線引導） */
+  .close-modal-btn {
+    background: #333; color: #fff; border: 1px solid #666; padding: 14px; border-radius: 10px;
+    font-weight: bold; font-size: 17px; cursor: pointer; text-align: center; margin-top: 4px;
+  }
+
+  /* 🎯 集合點膠囊橫條 */
   #targetBanner {
     position: absolute; left: 16px; right: 16px; bottom: 78px; z-index: 1005;
     background: rgba(17, 17, 17, 0.96); border: 2px solid #ffeb3b; border-radius: 20px;
@@ -221,8 +256,13 @@
   .bat-low-tag { background: #d50000; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
   .bat-ok-tag { background: #333; color: #00e676; font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #444; }
   
+  .pstatus-bubble {
+    display: inline-block; background: #ffeb3b; color: #000; font-size: 14px; font-weight: 900;
+    padding: 4px 10px; border-radius: 8px; margin-top: 6px; line-height: 1.3;
+  }
+
   .pmeta{ color: #bbb; font-size: 14px; font-weight: bold; margin-top: 5px; line-height: 1.4; }
-  .pwalk{ color: #ffeb3b; font-size: 13px; font-weight: bold; margin-top: 2px; }
+  .pwalk{ color: #00e676; font-size: 13px; font-weight: bold; margin-top: 3px; }
   .navbtn{
     background: #00e676; color: #000; text-decoration: none; font-size: 15px; font-weight: 900;
     padding: 10px 14px; border-radius: 8px; flex: 0 0 auto; border: 2px solid #000;
@@ -237,9 +277,15 @@
     border:4px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.6);
   }
   .pin .name{
-    position:absolute;left:0;top:20px;transform:translateX(-50%);
+    position:absolute;left:0;top:18px;transform:translateX(-50%);
     font-size:15px;font-weight:900;color:#000;background:#fff;
-    padding:4px 10px;border-radius:8px;white-space:nowrap;border:2px solid #000;
+    padding:3px 10px;border-radius:8px;white-space:nowrap;border:2px solid #000;
+  }
+  .pin .pin-status{
+    position:absolute;left:0;top:48px;transform:translateX(-50%);
+    font-size:13px;font-weight:900;color:#000;background:#ffeb3b;
+    padding:2px 8px;border-radius:6px;white-space:nowrap;border:2px solid #000;
+    box-shadow:0 3px 8px rgba(0,0,0,0.6); max-width:200px; overflow:hidden; text-overflow:ellipsis;
   }
   .pin.me .dot{box-shadow:0 0 0 4px rgba(255,255,255,.9),0 0 0 12px rgba(0,230,118,.5)}
   .pin.sos .dot { background:#ff1744!important; animation: sosPulse 0.8s infinite alternate; }
@@ -289,7 +335,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、步行時間預估、低電量與斷線提醒。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、一鍵狀態標籤、短語音留言與步行時間預估。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -310,22 +356,47 @@
   <div id="topbar">
     <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
     <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
+    <div class="chip hidden" id="myStatusChip" title="點擊修改目前狀態">💬 <span id="myStatusText"></span></div>
   </div>
 
   <!-- 🔍 地點搜尋彈出視窗 -->
-  <div id="searchModal" class="hidden">
-    <div class="search-box-card">
+  <div id="searchModal" class="modal-backdrop hidden">
+    <div class="modal-card">
       <h3 style="margin:0; color:#ffeb3b; font-size:20px;">🔍 搜尋集合地點</h3>
       <div class="search-input-row">
         <input id="searchInput" placeholder="輸入關鍵字 (例如：左營高鐵站)" autocomplete="off">
         <button id="searchSubmitBtn">搜尋</button>
       </div>
       <div id="searchResults"></div>
-      <button id="closeSearchModal" class="close-search">關閉</button>
+      <button id="closeSearchModal" class="close-modal-btn">關閉</button>
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條（點擊文字區可在地圖畫出引導線） -->
+  <!-- 💬 快速狀態與短語音留言彈出視窗 -->
+  <div id="statusModal" class="modal-backdrop hidden">
+    <div class="modal-card" style="border-color:#00e676;">
+      <h3 style="margin:0; color:#00e676; font-size:22px;">💬 廣播我的最新狀態</h3>
+      
+      <button class="quick-status-btn" data-status="🍔 我在買飲料/休息中">🍔 我在買飲料 / 休息中</button>
+      <button class="quick-status-btn" data-status="🚻 上廁所中，稍等">🚻 上廁所中，稍等</button>
+      <button class="quick-status-btn" data-status="🚗 塞車中，會晚到">🚗 塞車中，會晚到</button>
+      <button class="quick-status-btn" data-status="🛑 我已經抵達集合點">🛑 我已經抵達集合點</button>
+
+      <div class="voice-box">
+        <div style="font-size:15px; color:#ccc; font-weight:bold;">🎙️ 短語音留言（說話自動轉文字廣播）：</div>
+        <button id="voiceRecordBtn" class="voice-btn">🎙️ 點擊開始說話</button>
+        <div class="custom-msg-row">
+          <input id="customStatusInput" placeholder="或直接輸入簡短留言..." maxlength="30" autocomplete="off">
+          <button id="sendCustomStatusBtn">發送</button>
+        </div>
+      </div>
+
+      <button class="quick-status-btn clear-btn" data-status="">✅ 清除狀態（恢復正常顯示）</button>
+      <button id="closeStatusModal" class="close-modal-btn">關閉視窗</button>
+    </div>
+  </div>
+
+  <!-- 🎯 集合點膠囊橫條 -->
   <div id="targetBanner" class="hidden">
     <div class="t-info" id="focusTargetArea" title="點擊在地圖畫出引導線">
       <div class="t-title-row">🚩 <span id="targetName">集合點</span></div>
@@ -342,6 +413,7 @@
     <button id="copyBtn" title="複製邀請連結">🔗 邀請</button>
     <button id="leaveBtn" title="離開活動">離開</button>
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
+    <button id="statusToggleBtn" class="ctrl-btn" title="設定狀態或短語音留言">💬<span style="font-size:10px;">狀態</span></button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:10px;" id="locTxt">定位</span></button>
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:10px;">找地點</span></button>
   </div>
@@ -349,7 +421,7 @@
   <!-- 底部同伴面板 -->
   <div id="panel">
     <div class="panel-head" id="panelToggle">
-      <span>👥 同伴列表（點同伴或集合點看步行引導線）</span>
+      <span>👥 同伴列表（點同伴看步行引導線）</span>
       <span id="toggleIcon" style="font-size:14px;color:#fff;">▼ 收合</span>
     </div>
     <div id="peerList"></div>
@@ -369,8 +441,8 @@
   const COLORS = ['#ff5252','#448aff','#ffb300','#00e676','#aa00ff','#00bcd4','#ff6d00','#3f51b5','#e91e63','#8bc34a'];
   const BROKER  = 'wss://broker.emqx.io:8084/mqtt';   
   const TOPIC_PREFIX = 'geoact/v1/';
-  const PING_MS  = 15 * 1000;      // 每 15 秒主動發送一次心跳與定位
-  const OFFLINE_MS = 60 * 1000;    // 超過 60 秒 (1 分鐘) 未更新視為訊號中斷
+  const PING_MS  = 15 * 1000;
+  const OFFLINE_MS = 60 * 1000;
 
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
@@ -383,8 +455,9 @@
     targetName: '集合點',
     targetMarker: null,
     wakeLock: null,
-    batteryLevel: null,  // 0~100 整數
-    isCharging: false
+    batteryLevel: null,
+    isCharging: false,
+    myStatus: ''        // 💡 個人目前狀態標籤 / 短語音留言
   };
   const peers = new Map();   
 
@@ -398,7 +471,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.remove('show'), ms || 3000);
+    t._timer = setTimeout(() => t.classList.remove('show'), ms || 3500);
   }
   function hashColor(id) {
     let h = 0;
@@ -413,7 +486,6 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  /* 💡 計算步行預估時間與距離格式化（平均戶外步行速度約 75 公尺/分鐘） */
   function fmtWalkEstimate(m) {
     if (m == null) return '距離計算中...';
     const distStr = m < 1000 ? `${Math.round(m)} 公尺` : `${(m / 1000).toFixed(1)} 公里`;
@@ -442,6 +514,82 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
+  /* ================= 💬 個人狀態與短語音留言管理 ================= */
+  function setMyStatus(text) {
+    state.myStatus = (text || '').trim();
+    const chip = $('#myStatusChip');
+    const txtEl = $('#myStatusText');
+    if (state.myStatus) {
+      chip.classList.remove('hidden');
+      txtEl.textContent = state.myStatus;
+      toast('📢 已更新狀態：' + state.myStatus);
+    } else {
+      chip.classList.add('hidden');
+      txtEl.textContent = '';
+      toast('✅ 已清除目前狀態');
+    }
+    updateMeMarker();
+    sendPos();
+  }
+
+  function setupVoiceRecognition() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btn = $('#voiceRecordBtn');
+    const input = $('#customStatusInput');
+
+    if (!SpeechRec) {
+      btn.style.display = 'none';
+      return;
+    }
+
+    const recognition = new SpeechRec();
+    recognition.lang = 'zh-TW';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    let isRecording = false;
+
+    btn.addEventListener('click', () => {
+      if (isRecording) {
+        recognition.stop();
+        return;
+      }
+      try {
+        recognition.start();
+      } catch (e) {}
+    });
+
+    recognition.onstart = () => {
+      isRecording = true;
+      btn.classList.add('recording');
+      btn.innerHTML = '🔴 正在聆聽中...（請說話）';
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        const msg = '🎙️ ' + transcript;
+        input.value = transcript;
+        setMyStatus(msg);
+        $('#statusModal').classList.add('hidden');
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'not-allowed') {
+        toast('請允許麥克風權限才能使用語音留言');
+      } else {
+        toast('語音辨識未成功，請再試一次或直接輸入文字');
+      }
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      btn.classList.remove('recording');
+      btn.innerHTML = '🎙️ 點擊開始說話';
+    };
+  }
+
   /* ================= 🔋 手機電池電量監控 ================= */
   async function initBatteryMonitor() {
     if (!('getBattery' in navigator)) return;
@@ -452,7 +600,6 @@
         state.batteryLevel = Math.round(bat.level * 100);
         state.isCharging = bat.charging;
         
-        // 若電量剛跌破 20% 且未充電，立刻發送低電量通知
         if (state.batteryLevel <= 20 && !state.isCharging && (oldLvl === null || oldLvl > 20)) {
           toast(`🪫 您的手機電量低於 ${state.batteryLevel}%，已通知同伴！`, 5000);
           sendPos();
@@ -502,7 +649,7 @@
     peers.forEach(p => addPeerMarker(p));     
   }
 
-  function iconFor(nickname, color, isMe, isSOS, isOffline) {
+  function iconFor(nickname, color, isMe, isSOS, isOffline, statusText) {
     const sosClass = isSOS ? ' sos' : '';
     const meClass = isMe ? ' me' : '';
     const offClass = (!isMe && isOffline) ? ' offline' : '';
@@ -510,12 +657,17 @@
     if (isSOS) prefix = '🆘 ';
     else if (!isMe && isOffline) prefix = '⚠️ ';
 
+    const statusHtml = statusText 
+      ? `<div class="pin-status">${esc(statusText)}</div>` 
+      : '';
+
     return L.divIcon({
       className: '',
       html:
         '<div class="pin' + meClass + sosClass + offClass + '">' +
           '<div class="dot" style="background:' + (isSOS ? '#ff1744' : color) + '"></div>' +
           '<div class="name">' + prefix + esc(nickname) + '</div>' +
+          statusHtml +
         '</div>',
       iconSize: [0, 0],
       iconAnchor: [0, 0]
@@ -527,20 +679,20 @@
     const ll = [state.myPos.lat, state.myPos.lng];
     if (!state.meMarker) {
       state.meMarker = L.marker(ll, {
-        icon: iconFor(state.nickname, '#00e676', true, state.isSOS, false),
+        icon: iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus),
         zIndexOffset: 1000,
         interactive: false
       }).addTo(state.map);
     } else {
       state.meMarker.setLatLng(ll);
-      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS, false));
+      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus));
     }
   }
 
   function addPeerMarker(p) {
     if (!state.map || p.marker) return;
     const isOffline = (Date.now() - p.ts) > OFFLINE_MS;
-    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS, isOffline) })
+    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status) })
       .addTo(state.map)
       .on('click', () => focusPeer(p.id));
   }
@@ -666,7 +818,6 @@
     $('#targetNavBtn').href = 'https://www.google.com/maps/dir/?' + q.toString();
   }
 
-  /* 📍 在地圖上畫出前往集合點的直線步行引導線 */
   function focusTarget() {
     if (!state.targetPos || !state.map) return;
     clearLine();
@@ -693,6 +844,8 @@
     let p = peers.get(m.id);
     const wasSOS = p ? p.isSOS : false;
     const wasLowBat = p ? (p.bat != null && p.bat <= 20 && !p.chg) : false;
+    const oldStatus = p ? (p.status || '') : '';
+    const newStatus = typeof m.status === 'string' ? m.status.trim() : oldStatus;
 
     if (!p) {
       p = {
@@ -701,6 +854,7 @@
         lat: m.lat, lng: m.lng, isSOS: !!m.isSOS,
         bat: typeof m.bat === 'number' ? m.bat : null,
         chg: !!m.chg,
+        status: newStatus,
         ts: Date.now(), marker: null
       };
       peers.set(m.id, p);
@@ -710,10 +864,11 @@
       p.lat = m.lat; p.lng = m.lng; p.isSOS = !!m.isSOS;
       if (typeof m.bat === 'number') p.bat = m.bat;
       p.chg = !!m.chg;
+      p.status = newStatus;
       p.ts = Date.now();
       if (p.marker) {
         p.marker.setLatLng([m.lat, m.lng]);
-        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, false));
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, false, p.status));
       }
     }
 
@@ -724,6 +879,11 @@
     const isLowBatNow = (p.bat != null && p.bat <= 20 && !p.chg);
     if (!wasLowBat && isLowBatNow) {
       toast(`🪫 注意：${p.nickname} 手機電量僅剩 ${p.bat}%！`, 6000);
+    }
+
+    // 💡 當同伴更新狀態或發送短語音留言時，主動提醒大家
+    if (newStatus && newStatus !== oldStatus) {
+      toast(`💬 ${p.nickname}：${newStatus}`, 5000);
     }
 
     renderPeers();
@@ -755,9 +915,8 @@
 
     const list = [...peers.values()].map(p => {
       const isOffline = (now - p.ts) > OFFLINE_MS;
-      // 同步更新地圖標記的離線外觀
       if (p.marker) {
-        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, isOffline));
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status));
       }
       return {
         ...p,
@@ -775,7 +934,6 @@
     }
 
     el.innerHTML = list.map(p => {
-      // 電池狀態標籤
       let batTag = '';
       if (p.bat !== null) {
         if (p.bat <= 20 && !p.chg) {
@@ -785,11 +943,14 @@
         }
       }
 
-      // 離線斷訊狀態與時間文字
       const offlineTag = p.isOffline ? `<span class="offline-tag">⚠️ 訊號中斷</span>` : '';
       const timeStatus = p.isOffline 
         ? `<span style="color:#ff9100;">訊號中斷中 (最後更新: ${ago(p.ts)})</span>` 
         : `更新於 ${ago(p.ts)}`;
+
+      const statusBubble = p.status 
+        ? `<div><span class="pstatus-bubble">${esc(p.status)}</span></div>` 
+        : '';
 
       return `
       <div class="peer ${p.isSOS ? 'sos-active' : ''} ${p.isOffline ? 'offline' : ''}" onclick="focusPeer('${p.id}')">
@@ -801,6 +962,7 @@
             ${offlineTag}
             ${batTag}
           </div>
+          ${statusBubble}
           <div class="pwalk">🚶 ${fmtWalkEstimate(p.dist)}</div>
           <div class="pmeta">${timeStatus}</div>
         </div>
@@ -897,7 +1059,8 @@
       acc: state.myPos.acc, 
       isSOS: state.isSOS,
       bat: state.batteryLevel,
-      chg: state.isCharging
+      chg: state.isCharging,
+      status: state.myStatus
     });
   }
 
@@ -1029,6 +1192,7 @@
 
     state.joined = true;
     initBatteryMonitor();
+    setupVoiceRecognition();
     startGeo();
     connectMQTT();
     requestWakeLock();
@@ -1085,7 +1249,35 @@
   $('#sosBtn').addEventListener('click', toggleSOS);
   $('#clearTargetBtn').addEventListener('click', () => clearTargetPos(true));
   $('#focusTargetArea').addEventListener('click', focusTarget);
+
+  // 狀態視窗事件綁定
+  $('#statusToggleBtn').addEventListener('click', () => {
+    $('#statusModal').classList.remove('hidden');
+  });
+  $('#myStatusChip').addEventListener('click', () => {
+    $('#statusModal').classList.remove('hidden');
+  });
+  $('#closeStatusModal').addEventListener('click', () => {
+    $('#statusModal').classList.add('hidden');
+  });
+  document.querySelectorAll('.quick-status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setMyStatus(btn.getAttribute('data-status'));
+      $('#statusModal').classList.add('hidden');
+    });
+  });
+  $('#sendCustomStatusBtn').addEventListener('click', () => {
+    const val = $('#customStatusInput').value.trim();
+    if (!val) return toast('請輸入或說出狀態內容');
+    setMyStatus('💬 ' + val);
+    $('#customStatusInput').value = '';
+    $('#statusModal').classList.add('hidden');
+  });
+  $('#customStatusInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('#sendCustomStatusBtn').click();
+  });
   
+  // 搜尋視窗事件綁定
   $('#searchToggleBtn').addEventListener('click', () => {
     $('#searchModal').classList.remove('hidden');
     $('#searchInput').focus();
@@ -1109,7 +1301,7 @@
   })();
 
   setInterval(() => { sendPos(); }, PING_MS);        
-  setInterval(() => { renderPeers(); }, 10000); // 每 10 秒檢查一次所有同伴的最後更新時間與離線狀態
+  setInterval(() => { renderPeers(); }, 10000);
 
 })();
 </script>
