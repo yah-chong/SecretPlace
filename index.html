@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (領隊管理 + 停車標記 + 行程時間備註版)</title>
+<title>揪團定位 · 活動代號地圖 (領隊管理 + 個人專屬停車標記 + 行程時間備註版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -126,7 +126,8 @@
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
   #leaderPanelBtn { background:#ffb300; color:#000; border-color:#fff; }
   #itineraryToggleBtn { background:#ff9100; color:#000; border-color:#fff; }
-  #parkingBtn { background:#1565c0; color:#fff; border-color:#82b1ff; }
+  #parkingBtn { background:#1565c0; color:#fff; border-color:#82b1ff; transition: .2s; }
+  #parkingBtn.has-parking { background:#00c853; color:#000; border-color:#fff; box-shadow: 0 0 14px rgba(0,230,118,0.65); }
   #statusToggleBtn { background:#00e676; color:#000; border-color:#fff; }
   #locBtn.following { background:#2979ff; color:#fff; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
@@ -332,7 +333,7 @@
   }
   .close-modal-btn:active { background: #444; }
 
-  /* 🎯 集合點 & 🅿️ 停車位置膠囊橫條區 */
+  /* 🎯 集合點 & 🅿️ 個人專屬停車位置膠囊橫條區 */
   #bannersContainer {
     position: absolute; left: 12px; right: 12px; bottom: 76px; z-index: 1005;
     display: flex; flex-direction: column; gap: 8px; pointer-events: none;
@@ -369,6 +370,10 @@
     font-weight: 900; font-size: 15px; cursor: pointer; text-decoration: none; white-space: nowrap;
   }
   #parkingBanner .t-btn { background: #448aff; color: #fff; }
+  #parkingBanner .t-hide {
+    background: #2b3545; color: #cfd8dc; border: 1px solid #607d8b; padding: 8px 10px;
+    border-radius: 10px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
+  }
 
   .floating-banner .t-clear {
     background: #ff1744; color: #fff; border: none; padding: 8px 11px;
@@ -493,9 +498,9 @@
     transform: translate(-50%, -100%);
   }
   .parking-pin {
-    background: #1565c0; color: #fff; border: 3px solid #fff; border-radius: 10px;
-    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+    background: #1565c0; color: #fff; border: 3px solid #fff; border-radius: 12px;
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.85);
   }
 
   .leaflet-tooltip.lineTip{
@@ -535,7 +540,7 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、多站行程時間備註、停車位置標記與領隊安全管理。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、多站行程時間備註、個人專屬停車導航與領隊安全管理。</p>
 
     <label>活動代號（由發起人命名）</label>
     <input id="codeInput" type="text" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
@@ -552,7 +557,7 @@
     </label>
 
     <button id="joinBtn" class="primary">開始分享位置</button>
-    <p class="hint">按下後請允許「GPS 定位權限」。<br>位置僅在同代號的群組內同步。</p>
+    <p class="hint">按下後請允許「GPS 定位權限」。<br>位置僅在同代號的群組內同步（停車位置僅個人私密保存）。</p>
   </div>
 </div>
 
@@ -689,17 +694,18 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點 & 🅿️ 停車位置膠囊橫條區 -->
+  <!-- 🎯 集合點 & 🅿️ 個人專屬停車位置膠囊橫條區（平時隱藏，點擊「找車」才叫出） -->
   <div id="bannersContainer">
-    <!-- 🅿️ 停車位置橫條 -->
-    <div id="parkingBanner" class="floating-banner hidden" title="點擊查看停車位置">
+    <!-- 🅿️ 個人專屬停車位置橫條（僅喚醒時顯示） -->
+    <div id="parkingBanner" class="floating-banner hidden" title="點擊重新對焦停車位置">
       <div class="t-info" id="focusParkingArea">
-        <div class="t-title-row">🅿️ <span id="parkingName">停車位置</span> · <span id="parkingDistVal" style="color:#ffeb3b;">--</span></div>
+        <div class="t-title-row">🅿️ <span id="parkingName">我的停車位置</span> · <span id="parkingDistVal" style="color:#ffeb3b;">--</span></div>
         <div class="t-walk-row" id="parkingWalkEst">計算步行時間中...</div>
       </div>
       <div class="target-banner-actions">
-        <button id="parkingNavBtn" class="t-btn">找車導航</button>
-        <button id="clearParkingBtn" class="t-clear">清除</button>
+        <button id="parkingNavBtn" class="t-btn">導航</button>
+        <button id="hideParkingBtn" class="t-hide" title="暫時隱藏標記，保留紀錄">收起</button>
+        <button id="clearParkingBtn" class="t-clear" title="已取車，永久清除此次停車紀錄">已取車</button>
       </div>
     </div>
 
@@ -724,7 +730,7 @@
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
     <button id="leaderPanelBtn" class="ctrl-btn hidden" title="領隊管理與全體點名">👑<span style="font-size:11px;">管理</span></button>
     <button id="itineraryToggleBtn" class="ctrl-btn" title="今日行程清單與多站切換">📅<span style="font-size:11px;">行程</span></button>
-    <button id="parkingBtn" class="ctrl-btn" title="標記目前位置為停車處">🅿️<span style="font-size:11px;">停車</span></button>
+    <button id="parkingBtn" class="ctrl-btn" title="記錄個人停車位置 / 找車導航">🅿️<span style="font-size:11px;" id="parkingBtnTxt">停車</span></button>
     <button id="statusToggleBtn" class="ctrl-btn" title="設定狀態或短語音留言">💬<span style="font-size:11px;">狀態</span></button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:11px;" id="locTxt">定位</span></button>
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:11px;">找地點</span></button>
@@ -766,11 +772,12 @@
   const TOPIC_PREFIX = 'geoact/v1/';
   const PING_MS  = 15 * 1000;
   const OFFLINE_MS = 60 * 1000;
+  const PRIVATE_PARKING_KEY = 'geoact_private_parking_v1'; // 個人專屬純本機停車紀錄
 
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
     code: '', nickname: '', color: COLORS[0],
-    topic: '', targetTopic: '', itineraryTopic: '', controlTopic: '', parkingTopic: '',
+    topic: '', targetTopic: '', itineraryTopic: '', controlTopic: '',
     myPos: null, map: null, meMarker: null, line: null,
     client: null, watchId: null, firstFix: false, joined: false,
     isSOS: false,
@@ -779,9 +786,13 @@
     targetName: '集合點',
     targetNote: '',
     targetMarker: null,
+    // 🅿️ 個人專屬停車位置（純本機儲存，不同步給同伴，平時隱藏標記）
     parkingPos: null,
-    parkingName: '停車位置',
+    parkingName: '我的停車位置',
+    parkingTime: '',
+    parkingRevealed: false, // 平時為 false 不佔螢幕，點擊「找車」才變 true 顯示
     parkingMarker: null,
+    parkingLine: null,
     wakeLock: null,
     batteryLevel: null,
     isCharging: false,
@@ -997,9 +1008,7 @@
         itineraryUpdatedAt: state.itineraryUpdatedAt,
         targetPos: state.targetPos,
         targetName: state.targetName,
-        targetNote: state.targetNote,
-        parkingPos: state.parkingPos,
-        parkingName: state.parkingName
+        targetNote: state.targetNote
       };
       localStorage.setItem('geoact_cache_' + state.code, JSON.stringify(cache));
     } catch (e) {}
@@ -1019,70 +1028,151 @@
       if (cache.targetPos && typeof cache.targetPos.lat === 'number') {
         setTargetPos(cache.targetPos.lat, cache.targetPos.lng, cache.targetName || '集合點', false, true, cache.targetNote || '');
       }
-      if (cache.parkingPos && typeof cache.parkingPos.lat === 'number') {
-        setParkingPos(cache.parkingPos.lat, cache.parkingPos.lng, cache.parkingName || '停車位置', false);
+    } catch (e) {}
+  }
+
+  /* ================= 🅿️ 個人專屬停車位置管理（純本機儲存 + 平時隱藏 + 隨叫隨用） ================= */
+  function savePrivateParkingStorage() {
+    try {
+      if (state.parkingPos) {
+        localStorage.setItem(PRIVATE_PARKING_KEY, JSON.stringify({
+          lat: state.parkingPos.lat,
+          lng: state.parkingPos.lng,
+          name: state.parkingName,
+          time: state.parkingTime
+        }));
+      } else {
+        localStorage.removeItem(PRIVATE_PARKING_KEY);
       }
     } catch (e) {}
   }
 
-  /* ================= 🅿️ 停車位置標記管理 ================= */
-  function setParkingPos(lat, lng, name, broadcast, useRetain = true) {
-    state.parkingPos = { lat, lng };
-    state.parkingName = name || '停車位置';
-    
-    if (!state.parkingMarker && state.map) {
-      const pIcon = L.divIcon({
-        className: '',
-        html: '<div class="parking-pin">🅿️</div>',
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
-      });
-      state.parkingMarker = L.marker([lat, lng], { icon: pIcon })
-        .addTo(state.map)
-        .on('click', focusParking);
-    } else if (state.parkingMarker) {
-      state.parkingMarker.setLatLng([lat, lng]);
-    }
-
-    saveLocalCache();
-    updateParkingUI();
-
-    if (broadcast && state.client && state.client.connected) {
-      const msg = JSON.stringify({ type: 'set_parking', lat, lng, name: state.parkingName, id: state.id });
-      state.client.publish(state.parkingTopic, msg, { qos: 0, retain: !!useRetain });
-      if (useRetain) {
-        toast('🅿️ 已標記停車位置並同步給同伴！');
+  function loadPrivateParkingStorage() {
+    try {
+      const raw = localStorage.getItem(PRIVATE_PARKING_KEY);
+      if (!raw) return;
+      const pk = JSON.parse(raw);
+      if (pk && typeof pk.lat === 'number' && typeof pk.lng === 'number') {
+        state.parkingPos = { lat: pk.lat, lng: pk.lng };
+        state.parkingName = pk.name || '我的停車位置';
+        state.parkingTime = pk.time || '';
+        // 載入時保持隱藏（state.parkingRevealed = false），不佔用螢幕與地圖空間
+        state.parkingRevealed = false;
+        updateParkingUI();
       }
-    }
+    } catch (e) {}
   }
 
-  function clearParkingPos(broadcast) {
+  function recordPersonalParking(lat, lng, name) {
+    const nowTime = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    state.parkingPos = { lat, lng };
+    state.parkingName = name || '我的停車位置';
+    state.parkingTime = nowTime;
+    // 設定完成後預設收起，不常駐顯示在螢幕上
+    state.parkingRevealed = false;
+    hideParkingLayers();
+    savePrivateParkingStorage();
+    updateParkingUI();
+    toast(`✅ 已私密紀錄停車位置 (${nowTime})，平時自動隱藏，需要時按右側「🚗 找車」即可叫出！`, 4500);
+  }
+
+  function revealPersonalParking() {
+    if (!state.parkingPos) return;
+    state.parkingRevealed = true;
+    updateParkingUI();
+    focusParking();
+    toast('🅿️ 已叫出您的專屬停車位置標記');
+  }
+
+  function hidePersonalParking() {
+    state.parkingRevealed = false;
+    hideParkingLayers();
+    updateParkingUI();
+    toast('已暫時收起停車標記（紀錄仍保留）');
+  }
+
+  function clearPersonalParking() {
+    if (!confirm('確定已經取車，要永久清除這次的個人停車紀錄嗎？')) return;
     state.parkingPos = null;
-    state.parkingName = '停車位置';
+    state.parkingName = '我的停車位置';
+    state.parkingTime = '';
+    state.parkingRevealed = false;
+    hideParkingLayers();
+    savePrivateParkingStorage();
+    updateParkingUI();
+    toast('🗑️ 已清除個人停車紀錄');
+  }
+
+  function hideParkingLayers() {
     if (state.parkingMarker && state.map) {
       state.map.removeLayer(state.parkingMarker);
       state.parkingMarker = null;
     }
-    saveLocalCache();
-    updateParkingUI();
-
-    if (broadcast && state.client && state.client.connected) {
-      state.client.publish(state.parkingTopic, '', { qos: 0, retain: true });
-      toast('已清除停車位置標記');
+    if (state.parkingLine && state.map) {
+      state.map.removeLayer(state.parkingLine);
+      state.parkingLine = null;
     }
   }
 
   function updateParkingUI() {
+    const btn = $('#parkingBtn');
+    const btnTxt = $('#parkingBtnTxt');
     const banner = $('#parkingBanner');
-    if (!state.parkingPos) {
+
+    // 更新右側按鈕外觀：未停車顯示「🅿️ 停車」，已停車顯示綠色「🚗 找車」
+    if (state.parkingPos) {
+      btn.classList.add('has-parking');
+      btn.innerHTML = '🚗<span style="font-size:11px;" id="parkingBtnTxt">找車</span>';
+      btn.title = '叫出我的個人停車位置與導航';
+    } else {
+      btn.classList.remove('has-parking');
+      btn.innerHTML = '🅿️<span style="font-size:11px;" id="parkingBtnTxt">停車</span>';
+      btn.title = '記錄目前位置為個人停車處（僅自己可見）';
+    }
+
+    // 只有在「有停車紀錄」且「使用者主動喚醒 (parkingRevealed)」時，才在螢幕與地圖上顯示
+    if (!state.parkingPos || !state.parkingRevealed) {
       banner.classList.add('hidden');
+      hideParkingLayers();
       return;
     }
+
     banner.classList.remove('hidden');
     const dist = state.myPos ? haversine(state.myPos, state.parkingPos) : null;
-    $('#parkingName').textContent = state.parkingName;
+    const timeSuffix = state.parkingTime ? ` (${state.parkingTime})` : '';
+    $('#parkingName').textContent = state.parkingName + timeSuffix;
     $('#parkingDistVal').textContent = fmtDistSimple(dist);
     $('#parkingWalkEst').textContent = fmtTimeEstimate(dist);
+
+    // 繪製地圖上的 🅿️ 專屬標記
+    if (state.map) {
+      const pLoc = [state.parkingPos.lat, state.parkingPos.lng];
+      if (!state.parkingMarker) {
+        const pIcon = L.divIcon({
+          className: '',
+          html: '<div class="parking-pin">🅿️</div>',
+          iconSize: [38, 38],
+          iconAnchor: [19, 19]
+        });
+        state.parkingMarker = L.marker(pLoc, { icon: pIcon, zIndexOffset: 900 })
+          .addTo(state.map)
+          .on('click', focusParking);
+      } else {
+        state.parkingMarker.setLatLng(pLoc);
+      }
+
+      // 若有目前位置，繪製藍色虛線引導至愛車
+      if (state.myPos) {
+        const mine = [state.myPos.lat, state.myPos.lng];
+        if (!state.parkingLine) {
+          state.parkingLine = L.polyline([mine, pLoc], {
+            color: '#448aff', weight: 5, dashArray: '10 10', opacity: 0.9
+          }).addTo(state.map);
+        } else {
+          state.parkingLine.setLatLngs([mine, pLoc]);
+        }
+      }
+    }
   }
 
   function focusParking() {
@@ -1098,23 +1188,37 @@
     }
   }
 
+  // 右側按鈕點擊：若尚未停車 -> 記錄車位；若已停車 -> 切換叫出/收起停車標記
   $('#parkingBtn').addEventListener('click', () => {
-    if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再標記停車處');
-    const note = prompt('請輸入停車位置備註（例如：B2 18號車位、廟前停車場）：', `${state.nickname} 的停車處`);
-    if (note === null) return;
-    setParkingPos(state.myPos.lat, state.myPos.lng, note.trim() || '停車位置', true);
+    if (!state.parkingPos) {
+      if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再記錄停車處');
+      const note = prompt('請輸入個人停車備註（僅自己手機保存，例如：B2 18號車位、廟前樹下）：', '我的停車位置');
+      if (note === null) return;
+      recordPersonalParking(state.myPos.lat, state.myPos.lng, note.trim() || '我的停車位置');
+    } else {
+      if (!state.parkingRevealed) {
+        revealPersonalParking();
+      } else {
+        focusParking();
+      }
+    }
   });
 
   $('#focusParkingArea').addEventListener('click', focusParking);
   $('#parkingNavBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     if (state.parkingPos) {
+      // 維持原有系統智慧選擇方式（iOS 彈選 Apple/Google 地圖，Android 直接開 Google 地圖）
       openSmartNavigation(state.parkingPos.lat, state.parkingPos.lng, state.parkingName);
     }
   });
+  $('#hideParkingBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    hidePersonalParking();
+  });
   $('#clearParkingBtn').addEventListener('click', (e) => {
     e.stopPropagation();
-    clearParkingPos(true);
+    clearPersonalParking();
   });
 
   /* ================= 📅 今日行程管理、時間備註、順序調整與一鍵切換 ================= */
@@ -1428,9 +1532,8 @@
     if (state.targetPos && !state.targetMarker) {
       setTargetPos(state.targetPos.lat, state.targetPos.lng, state.targetName, false, true, state.targetNote);
     }
-    if (state.parkingPos && !state.parkingMarker) {
-      setParkingPos(state.parkingPos.lat, state.parkingPos.lng, state.parkingName, false);
-    }
+    // 僅在已手動喚醒停車標記時才畫在地圖上
+    updateParkingUI();
   }
 
   function iconFor(nickname, color, isMe, isSOS, isOffline, statusText, isLeader) {
@@ -1850,7 +1953,7 @@
     sendPos();
   }
 
-  /* ================= MQTT 即時同步 ================= */
+  /* ================= MQTT 即時同步 (僅同步群組狀態，不含個人停車位置) ================= */
   function send(type, extra) {
     if (!state.client || !state.client.connected) return;
     const msg = Object.assign({
@@ -1891,8 +1994,7 @@
       state.client.subscribe(state.topic, { qos: 0 });
       state.client.subscribe(state.targetTopic, { qos: 0 });
       state.client.subscribe(state.itineraryTopic, { qos: 0 });
-      state.client.subscribe(state.controlTopic, { qos: 0 });
-      state.client.subscribe(state.parkingTopic, { qos: 0 }, err => {
+      state.client.subscribe(state.controlTopic, { qos: 0 }, err => {
         if (!err) {
           send('hello');        
           sendPos();            
@@ -1927,23 +2029,6 @@
                 $('#rollcallAlertModal').classList.add('hidden');
               }
             }
-          }
-        } catch(e){}
-        return;
-      }
-
-      // 接收停車位置同步
-      if (topic === state.parkingTopic) {
-        if (!payload) {
-          clearParkingPos(false);
-          return;
-        }
-        try {
-          const pk = JSON.parse(payload);
-          if (pk && pk.type === 'set_parking' && typeof pk.lat === 'number') {
-            if (pk.id === state.id) return;
-            setParkingPos(pk.lat, pk.lng, pk.name, false);
-            toast(`🅿️ 同伴已標記停車處：${pk.name}`);
           }
         } catch(e){}
         return;
@@ -1997,10 +2082,6 @@
           sendPos();
           if (state.itinerary.length > 0) broadcastItinerary(false);
           if (state.isLeader) broadcastControlState(false);
-          if (state.parkingPos) {
-            const pkMsg = JSON.stringify({ type: 'set_parking', lat: state.parkingPos.lat, lng: state.parkingPos.lng, name: state.parkingName, id: state.id });
-            state.client.publish(state.parkingTopic, pkMsg, { qos: 0, retain: false });
-          }
           if (state.targetPos) {
             const targetMsg = JSON.stringify({
               type: 'set_target',
@@ -2094,7 +2175,6 @@
     state.targetTopic = TOPIC_PREFIX + safeCode + '/target';
     state.itineraryTopic = TOPIC_PREFIX + safeCode + '/itinerary';
     state.controlTopic = TOPIC_PREFIX + safeCode + '/control';
-    state.parkingTopic = TOPIC_PREFIX + safeCode + '/parking';
     state.color = hashColor(state.id);
 
     $('#topCode').textContent = code;
@@ -2107,6 +2187,7 @@
     $('#mapScreen').classList.remove('hidden');
 
     loadLocalCache();
+    loadPrivateParkingStorage(); // 載入個人專屬本機停車紀錄（平時保持隱藏）
     updateLockUI();
 
     state.joined = true;
