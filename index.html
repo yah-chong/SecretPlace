@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (多站行程打卡清單 + 智慧導航選單)</title>
+<title>揪團定位 · 活動代號地圖 (領隊管理 + 停車標記 + 行程時間備註版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -37,24 +37,41 @@
   }
   .card{
     width:100%;max-width:460px;background:#111;
-    border:2px solid #555;border-radius:16px;padding:28px 20px;
+    border:2px solid #555;border-radius:16px;padding:26px 20px;
   }
-  .card h1{margin:0 0 12px;font-size:32px;letter-spacing:1px;color:#fff;}
-  .sub{margin:0 0 22px;font-size:18px;color:#eee;line-height:1.6;font-weight:500;}
-  label{display:block;font-size:19px;color:#ffeb3b;margin:18px 0 8px;font-weight:bold;letter-spacing:1px}
-  input{
-    width:100%;padding:16px;border-radius:12px;border:2.5px solid #666;
-    background:#1c1c1c;color:#fff;font-size:22px;font-weight:bold;outline:none;transition:.2s;
+  .card h1{margin:0 0 10px;font-size:32px;letter-spacing:1px;color:#fff;}
+  .sub{margin:0 0 18px;font-size:17px;color:#eee;line-height:1.55;font-weight:500;}
+  label{display:block;font-size:18px;color:#ffeb3b;margin:15px 0 8px;font-weight:bold;letter-spacing:1px}
+  input[type="text"], input:not([type="checkbox"]){
+    width:100%;padding:15px;border-radius:12px;border:2.5px solid #666;
+    background:#1c1c1c;color:#fff;font-size:21px;font-weight:bold;outline:none;transition:.2s;
   }
   input:focus{border-color:#ffeb3b;background:#000;}
   input::placeholder{color:#999;font-weight:normal;}
+
+  /* 領隊勾選框樣式 */
+  .leader-check-row {
+    display: flex; align-items: center; gap: 12px; margin-top: 18px;
+    background: #1a180d; border: 2px solid #ffb300; border-radius: 12px;
+    padding: 13px 14px; cursor: pointer; user-select: none;
+  }
+  .leader-check-row input[type="checkbox"] {
+    width: 24px; height: 24px; accent-color: #ffb300; margin: 0; cursor: pointer; flex-shrink: 0;
+  }
+  .leader-check-text {
+    font-size: 18px; font-weight: 900; color: #ffeb3b; line-height: 1.35;
+  }
+  .leader-check-sub {
+    font-size: 14px; color: #ccc; font-weight: normal; display: block; margin-top: 2px;
+  }
+
   button.primary{
-    width:100%;margin-top:28px;padding:18px;border:0;border-radius:12px;font-size:24px;font-weight:900;
+    width:100%;margin-top:22px;padding:17px;border:0;border-radius:12px;font-size:23px;font-weight:900;
     background:#ffeb3b;color:#000;cursor:pointer;
     box-shadow:0 6px 15px rgba(255,235,59,.35);transition:.15s;
   }
   button.primary:active{transform:scale(.97);background:#fbc02d;}
-  .hint{font-size:16px;color:#bbb;text-align:center;margin:18px 0 0;line-height:1.6}
+  .hint{font-size:15px;color:#bbb;text-align:center;margin:16px 0 0;line-height:1.55}
 
   /* ---------- 地圖畫面 ---------- */
   #mapScreen{background:#000}
@@ -63,20 +80,26 @@
   /* 頂部資訊列 */
   #topbar{
     position:absolute;top:0;left:0;right:0;z-index:1000;
-    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    display:flex;gap:7px;align-items:center;flex-wrap:wrap;
     padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));
     pointer-events:none;background:linear-gradient(to bottom, rgba(0,0,0,0.88) 65%, rgba(0,0,0,0));
   }
   #topbar > * { pointer-events:auto; }
 
   .chip{
-    background:#000;color:#fff;border-radius:8px;padding:8px 12px;font-size:16px;font-weight:bold;
-    display:flex;gap:6px;align-items:center;border:2px solid #666;white-space:nowrap; 
-    max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
+    background:#000;color:#fff;border-radius:8px;padding:7px 11px;font-size:15px;font-weight:bold;
+    display:flex;gap:5px;align-items:center;border:2px solid #666;white-space:nowrap; 
+    max-width: 58vw; overflow: hidden; text-overflow: ellipsis;
   }
   .chip .lbl{color:#ccc;}
-  .chip b{color:#ffeb3b;font-size:17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+  .chip b{color:#ffeb3b;font-size:16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
   
+  #leaderChip {
+    background: #2b2100; border-color: #ffb300; color: #ffeb3b; cursor: pointer;
+  }
+  #lockIndicatorChip {
+    background: #2b1111; border-color: #ff5252; color: #ff8a80; font-size: 14px;
+  }
   #myStatusChip {
     background:#1b2e1e; border-color:#00e676; color:#fff; max-width:92vw; cursor:pointer;
   }
@@ -87,13 +110,13 @@
 
   /* 🔍 右側控制按鈕組 */
   .control-group {
-    position:absolute;right:12px;top:42%;transform:translateY(-50%);z-index:1000;
-    display:flex;flex-direction:column;gap:8px; align-items:flex-end;
+    position:absolute;right:12px;top:43%;transform:translateY(-50%);z-index:1000;
+    display:flex;flex-direction:column;gap:7px; align-items:flex-end;
   }
   
   .ctrl-btn {
-    width:58px;height:58px;border-radius:50%;border:3px solid #fff;
-    background:#000;color:#fff;font-size:19px;font-weight:bold;cursor:pointer;
+    width:56px;height:56px;border-radius:50%;border:3px solid #fff;
+    background:#000;color:#fff;font-size:18px;font-weight:bold;cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;
     flex-direction:column;line-height:1.15;
   }
@@ -101,13 +124,15 @@
   
   #sosBtn { background:#d32f2f; border-color:#ff5252; color:#fff; }
   #sosBtn.active { background:#ff1744; border-color:#fff; animation: alertFlash .5s infinite alternate; }
-  #statusToggleBtn { background:#00e676; color:#000; border-color:#fff; }
+  #leaderPanelBtn { background:#ffb300; color:#000; border-color:#fff; }
   #itineraryToggleBtn { background:#ff9100; color:#000; border-color:#fff; }
+  #parkingBtn { background:#1565c0; color:#fff; border-color:#82b1ff; }
+  #statusToggleBtn { background:#00e676; color:#000; border-color:#fff; }
   #locBtn.following { background:#2979ff; color:#fff; border-color:#fff; }
   #searchToggleBtn { background:#ffeb3b; color:#000; border-color:#fff; }
 
   #copyBtn {
-    width: 58px; height: 38px; border-radius: 8px; border: 2px solid #999;
+    width: 56px; height: 36px; border-radius: 8px; border: 2px solid #999;
     background: #111; color: #fff; font-size: 13px; font-weight: bold;
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
     display: flex; align-items: center; justify-content: center; transition: .15s;
@@ -115,11 +140,11 @@
   #copyBtn:active { transform: scale(0.94); background: #333; }
 
   #leaveBtn {
-    width: 58px; height: 38px; border-radius: 8px; border: 2.5px solid #ff5252;
+    width: 56px; height: 36px; border-radius: 8px; border: 2.5px solid #ff5252;
     background: #1a0505; color: #ff5252; font-size: 13px; font-weight: 900;
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.6);
     display: flex; align-items: center; justify-content: center;
-    transition: .15s; margin-bottom: 4px;
+    transition: .15s; margin-bottom: 2px;
   }
   #leaveBtn:active { transform: scale(0.94); background: #3a0d0d; }
 
@@ -138,23 +163,23 @@
   }
   .search-input-row { display: flex; gap: 8px; }
   .search-input-row input {
-    font-size: 19px; padding: 14px; border-radius: 10px;
+    font-size: 18px; padding: 13px; border-radius: 10px;
     border: 2.5px solid #777; background: #1c1c1c; color: #fff; flex: 1;
   }
   .search-input-row input:focus { border-color: #ffeb3b; background: #000; }
   .search-input-row button {
     background: #ffeb3b; color: #000; border: none; border-radius: 10px;
-    padding: 0 20px; font-weight: 900; font-size: 18px; cursor: pointer; white-space: nowrap;
+    padding: 0 18px; font-weight: 900; font-size: 18px; cursor: pointer; white-space: nowrap;
   }
 
   #searchResults, #itinerarySearchResults {
     flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     display: flex; flex-direction: column; gap: 10px; margin-top: 2px;
   }
-  #itinerarySearchResults { max-height: 36vh; }
+  #itinerarySearchResults { max-height: 32vh; }
 
   .search-item {
-    background: #1a1a1a; border-bottom: 2px solid #333; padding: 14px 12px; border-radius: 10px;
+    background: #1a1a1a; border-bottom: 2px solid #333; padding: 13px 12px; border-radius: 10px;
     color: #fff; cursor: pointer; transition: .15s;
     display: flex; flex-direction: column; gap: 6px;
   }
@@ -180,14 +205,19 @@
   }
   .itinerary-item {
     background: #181818; border-left: 6px solid #555; border-radius: 10px;
-    padding: 14px 12px; display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
   }
   .itinerary-item.active-stop {
     border-left-color: #ff9100; background: #261b08;
   }
   .itinerary-title {
-    color: #ffffff; font-size: 21px; font-weight: 900; line-height: 1.4;
+    color: #ffffff; font-size: 20px; font-weight: 900; line-height: 1.4;
     word-break: break-word;
+  }
+  .itinerary-note-badge {
+    display: inline-block; background: #2a2410; color: #ffeb3b; border: 1px solid #ffb300;
+    font-size: 15px; font-weight: bold; padding: 4px 10px; border-radius: 8px;
+    align-self: flex-start; line-height: 1.4;
   }
   .active-badge {
     display: inline-block; background: #ff9100; color: #000; font-size: 14px; font-weight: 900;
@@ -195,16 +225,17 @@
   }
   .itinerary-bottom-row {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 2px;
   }
   .itinerary-dist {
-    color: #00e676; font-size: 17px; font-weight: 900;
+    color: #00e676; font-size: 16px; font-weight: 900;
   }
   .itinerary-actions {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
   .itinerary-move-btn {
     background: #2b2b2b; color: #ffeb3b; border: 1.5px solid #666;
-    padding: 8px 11px; border-radius: 8px; font-size: 16px; font-weight: 900;
+    padding: 8px 10px; border-radius: 8px; font-size: 15px; font-weight: 900;
     cursor: pointer; line-height: 1;
   }
   .itinerary-move-btn:disabled {
@@ -212,17 +243,61 @@
   }
   .itinerary-move-btn:not(:disabled):active { background: #444; }
 
+  .itinerary-edit-btn {
+    background: #1f2a38; color: #82b1ff; border: 1.5px solid #448aff;
+    padding: 8px 10px; border-radius: 8px; font-size: 15px; font-weight: 900;
+    cursor: pointer; white-space: nowrap;
+  }
+  .itinerary-edit-btn:active { background: #2c3e50; }
+
   .itinerary-set-btn {
-    background: #00e676; color: #000; border: none; padding: 9px 14px; border-radius: 8px;
-    font-size: 16px; font-weight: 900; cursor: pointer; white-space: nowrap;
+    background: #00e676; color: #000; border: none; padding: 9px 13px; border-radius: 8px;
+    font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
   .itinerary-set-btn:active { background: #00c853; transform: scale(0.96); }
 
   .itinerary-del-btn {
-    background: #3a1212; color: #ff6e6e; border: 1.5px solid #ff5252; padding: 8px 11px; border-radius: 8px;
+    background: #3a1212; color: #ff6e6e; border: 1.5px solid #ff5252; padding: 8px 10px; border-radius: 8px;
     font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
   .itinerary-del-btn:active { background: #5a1a1a; }
+
+  /* 👑 領隊管理視窗與點名卡片樣式 */
+  .leader-box {
+    background: #181818; border: 2px solid #ffb300; border-radius: 14px; padding: 15px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .leader-switch-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .rollcall-status-card {
+    background: #141e26; border: 2px solid #2979ff; border-radius: 12px; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .rollcall-member-tag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 8px;
+    font-size: 15px; font-weight: 900;
+  }
+  .rollcall-member-tag.checked { background: #003314; color: #00e676; border: 1.5px solid #00e676; }
+  .rollcall-member-tag.pending { background: #2a1515; color: #ff8a80; border: 1.5px solid #ff5252; }
+
+  /* 📣 全體點名彈出確認視窗 (團員端) */
+  #rollcallAlertModal {
+    position: fixed; inset: 0; z-index: 3500; background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .rollcall-alert-card {
+    background: #161616; border: 3px solid #ffeb3b; border-radius: 20px;
+    padding: 24px 20px; max-width: 420px; width: 100%; text-align: center;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.95);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .rollcall-confirm-btn {
+    width: 100%; padding: 18px; border-radius: 14px; border: none;
+    background: #00e676; color: #000; font-size: 22px; font-weight: 900;
+    cursor: pointer; box-shadow: 0 6px 18px rgba(0,230,118,0.4);
+  }
+  .rollcall-confirm-btn:active { transform: scale(0.96); }
 
   /* 💬 快速狀態按鈕與短語音留言樣式 */
   .quick-status-btn {
@@ -257,36 +332,52 @@
   }
   .close-modal-btn:active { background: #444; }
 
-  /* 🎯 集合點膠囊橫條 (雙行完美排版，避免被按鈕遮蔽) */
-  #targetBanner {
-    position: absolute; left: 12px; right: 12px; bottom: 78px; z-index: 1005;
-    background: rgba(12, 12, 12, 0.96); border: 2.5px solid #ff9100; border-radius: 16px;
-    padding: 10px 12px; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  /* 🎯 集合點 & 🅿️ 停車位置膠囊橫條區 */
+  #bannersContainer {
+    position: absolute; left: 12px; right: 12px; bottom: 76px; z-index: 1005;
+    display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  #bannersContainer > * { pointer-events: auto; }
+
+  .floating-banner {
+    background: rgba(12, 12, 12, 0.96); border-radius: 15px;
+    padding: 9px 12px; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 8px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.9); cursor: pointer;
   }
-  #targetBanner .t-info { 
-    flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+  #targetBanner { border: 2.5px solid #ff9100; }
+  #parkingBanner { border: 2.5px solid #448aff; background: rgba(10, 22, 38, 0.96); }
+
+  .floating-banner .t-info { 
+    flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
   }
-  #targetBanner .t-title-row {
-    font-size: 17px; font-weight: 900; color: #ffab40; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  .floating-banner .t-title-row {
+    font-size: 16px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  #targetBanner .t-walk-row {
-    font-size: 15px; font-weight: 900; color: #00e676; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  #targetBanner .t-title-row { color: #ffab40; }
+  #parkingBanner .t-title-row { color: #82b1ff; }
+
+  .floating-banner .t-note-row {
+    font-size: 14px; font-weight: bold; color: #ffeb3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .floating-banner .t-walk-row {
+    font-size: 14px; font-weight: 900; color: #00e676; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   
   .target-banner-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-  #targetBanner .t-btn {
-    background: #00e676; color: #000; border: none; padding: 9px 14px; border-radius: 10px;
+  .floating-banner .t-btn {
+    background: #00e676; color: #000; border: none; padding: 8px 13px; border-radius: 10px;
     font-weight: 900; font-size: 15px; cursor: pointer; text-decoration: none; white-space: nowrap;
   }
-  #targetBanner .t-clear {
-    background: #ff1744; color: #fff; border: none; padding: 9px 12px;
-    border-radius: 10px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
+  #parkingBanner .t-btn { background: #448aff; color: #fff; }
+
+  .floating-banner .t-clear {
+    background: #ff1744; color: #fff; border: none; padding: 8px 11px;
+    border-radius: 10px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
 
   /* 🗺️ 智慧導航選擇彈出選單樣式 */
   #navPickerModal {
-    position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.75);
+    position: fixed; inset: 0; z-index: 3200; background: rgba(0,0,0,0.75);
     display: flex; align-items: flex-end; justify-content: center;
     padding: 0 12px calc(16px + env(safe-area-inset-bottom));
     opacity: 0; pointer-events: none; transition: opacity .2s ease;
@@ -352,6 +443,8 @@
   .pinfo{ flex: 1; min-width: 0; }
   
   .pname{ color: #fff; font-size: 20px; font-weight: 900; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .leader-badge { background: #ffb300; color: #000; font-size: 13px; padding: 2px 7px; border-radius: 5px; font-weight: 900; }
+  .rollcall-ok-tag { background: #00e676; color: #000; font-size: 13px; padding: 2px 7px; border-radius: 5px; font-weight: 900; }
   .sos-tag { background: #ff1744; color: #fff; font-size: 13px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
   .offline-tag { background: #ff9100; color: #000; font-size: 13px; padding: 2px 6px; border-radius: 4px; font-weight: 900; }
   .bat-low-tag { background: #d50000; color: #fff; font-size: 13px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
@@ -382,6 +475,7 @@
     font-size:16px;font-weight:900;color:#000;background:#fff;
     padding:3px 10px;border-radius:8px;white-space:nowrap;border:2px solid #000;
   }
+  .pin.leader .name { background: #ffeb3b; border-color: #000; }
   .pin .pin-status{
     position:absolute;left:0;top:50px;transform:translateX(-50%);
     font-size:14px;font-weight:900;color:#000;background:#ffeb3b;
@@ -398,6 +492,11 @@
     font-size: 34px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
     transform: translate(-50%, -100%);
   }
+  .parking-pin {
+    background: #1565c0; color: #fff; border: 3px solid #fff; border-radius: 10px;
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+  }
 
   .leaflet-tooltip.lineTip{
     background:#000;color:#ffeb3b;border:2px solid #fff;font-size:16px;font-weight:900;
@@ -413,7 +512,7 @@
     max-width:88vw;
   }
   #toast{
-    position:fixed;left:50%;bottom:135px;transform:translate(-50%,20px);z-index:3000;
+    position:fixed;left:50%;bottom:145px;transform:translate(-50%,20px);z-index:3400;
     background:#ffeb3b;color:#000;padding:15px 22px;border-radius:10px;font-weight:900;
     font-size:18px;opacity:0;transition:.25s;pointer-events:none;
     border:3px solid #000;max-width:92vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.6);
@@ -436,13 +535,21 @@
 <div id="joinScreen" class="screen">
   <div class="card">
     <h1>📍 揪團定位</h1>
-    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、多站行程清單打卡、一鍵狀態與步行導引。</p>
+    <p class="sub">輸入同一組「活動代號」，就能在同一張地圖上即時看見彼此位置、多站行程時間備註、停車位置標記與領隊安全管理。</p>
 
     <label>活動代號（由發起人命名）</label>
-    <input id="codeInput" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
+    <input id="codeInput" type="text" placeholder="例如：2026旅遊" maxlength="30" autocomplete="off">
 
     <label>你的暱稱 / 姓名</label>
-    <input id="nickInput" placeholder="例如：阿明" maxlength="12" autocomplete="off">
+    <input id="nickInput" type="text" placeholder="例如：阿明" maxlength="12" autocomplete="off">
+
+    <label class="leader-check-row" for="leaderCheckbox">
+      <input type="checkbox" id="leaderCheckbox">
+      <div class="leader-check-text">
+        👑 我是領隊 / 活動發起人
+        <span class="leader-check-sub">開啟鎖定行程防誤刪、發起全體點名簽到</span>
+      </div>
+    </label>
 
     <button id="joinBtn" class="primary">開始分享位置</button>
     <p class="hint">按下後請允許「GPS 定位權限」。<br>位置僅在同代號的群組內同步。</p>
@@ -457,7 +564,57 @@
   <div id="topbar">
     <div class="chip"><span class="lbl">代號</span><b id="topCode">—</b></div>
     <div class="chip"><span id="netDot"></span><span class="lbl">上線</span><b id="topCount">1</b></div>
+    <div class="chip hidden" id="leaderChip" title="點擊開啟領隊管理面板">👑 領隊</div>
+    <div class="chip hidden" id="lockIndicatorChip" title="領隊已鎖定行程與集合點，防止誤操作">🔒 已鎖定編輯</div>
     <div class="chip hidden" id="myStatusChip" title="點擊修改目前狀態">💬 <span id="myStatusText"></span></div>
+  </div>
+
+  <!-- 👑 領隊專屬管理面板滿版視窗 -->
+  <div id="leaderModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h3 style="margin:0; color:#ffb300; font-size:23px; font-weight:900;">👑 領隊 / 發起人專屬管理</h3>
+      
+      <!-- 鎖定開關 -->
+      <div class="leader-box">
+        <div class="leader-switch-row">
+          <div>
+            <div style="font-size:19px; font-weight:900; color:#fff;">🔒 鎖定行程與集合點</div>
+            <div style="font-size:14px; color:#ccc; margin-top:4px; line-height:1.4;">開啟後，只有領隊可以新增/刪除行程、調整順序或變更集合點，防止團員誤按。</div>
+          </div>
+          <button id="toggleLockBtn" style="background:#333; color:#fff; border:2px solid #888; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:900; cursor:pointer; white-space:nowrap;">目前：未鎖定</button>
+        </div>
+      </div>
+
+      <!-- 一鍵集合點名 -->
+      <div class="leader-box" style="border-color:#2979ff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="font-size:19px; font-weight:900; color:#82b1ff;">📣 全體集合點名簽到</div>
+          <button id="startRollcallBtn" style="background:#2979ff; color:#fff; border:none; padding:10px 14px; border-radius:10px; font-size:16px; font-weight:900; cursor:pointer; white-space:nowrap;">發起點名</button>
+        </div>
+        <div style="font-size:14px; color:#ccc;">發車前或景點集合時使用，全體成員畫面將跳出「我在這裡」確認按鈕。</div>
+        
+        <div id="rollcallStatusBox" class="rollcall-status-card hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span id="rollcallSummaryText" style="font-size:17px; font-weight:900; color:#ffeb3b;">點名進度：0 / 1 人已確認</span>
+            <button id="endRollcallBtn" style="background:#444; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer;">結束點名</button>
+          </div>
+          <div id="rollcallMembersList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <button id="closeLeaderModal" class="close-modal-btn">關閉管理面板</button>
+    </div>
+  </div>
+
+  <!-- 📣 團員收到的點名確認彈窗 -->
+  <div id="rollcallAlertModal" class="hidden">
+    <div class="rollcall-alert-card">
+      <div style="font-size:44px;">📣</div>
+      <h3 style="margin:0; font-size:24px; color:#ffeb3b; font-weight:900;" id="rollcallAlertTitle">領隊發起集合點名！</h3>
+      <p style="margin:0; font-size:18px; color:#eee; line-height:1.5;">請點擊下方按鈕回報您的最新狀態，讓領隊確認人數。</p>
+      <button id="confirmRollcallBtn" class="rollcall-confirm-btn">🙋‍♂️ 我在這裡 / 已上車</button>
+      <button id="dismissRollcallBtn" style="background:transparent; border:1.5px solid #666; color:#aaa; padding:10px; border-radius:10px; font-size:15px; cursor:pointer;">稍後再回報</button>
+    </div>
   </div>
 
   <!-- 🔍 單一地點搜尋滿版視窗 -->
@@ -465,7 +622,7 @@
     <div class="modal-card">
       <h3 style="margin:0; color:#ffeb3b; font-size:23px; font-weight:900;">🔍 搜尋集合地點</h3>
       <div class="search-input-row">
-        <input id="searchInput" placeholder="輸入關鍵字 (例如：高雄巨蛋)" autocomplete="off">
+        <input id="searchInput" type="text" placeholder="輸入關鍵字 (例如：高雄巨蛋)" autocomplete="off">
         <button id="searchSubmitBtn">搜尋</button>
       </div>
       <div id="searchResults"></div>
@@ -473,7 +630,7 @@
     </div>
   </div>
 
-  <!-- 📅 今日行程打卡清單管理滿版視窗 -->
+  <!-- 📅 今日行程打卡清單管理滿版視窗 (支援時間與備註) -->
   <div id="itineraryModal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
@@ -481,11 +638,19 @@
         <button id="addStopToggleBtn" style="background:#ff9100; color:#000; border:none; padding:10px 14px; border-radius:10px; font-weight:900; font-size:16px; cursor:pointer; white-space:nowrap;">＋ 新增站點</button>
       </div>
 
-      <!-- 搜尋新增站點區塊 (預設收合) -->
+      <!-- 鎖定提示橫幅 -->
+      <div id="itineraryLockedHint" class="hidden" style="background:#2b1111; border:1.5px solid #ff5252; color:#ff8a80; padding:10px 12px; border-radius:10px; font-size:15px; font-weight:bold;">
+        🔒 領隊已開啟「防誤操作鎖定」，目前僅供檢視與導航。
+      </div>
+
+      <!-- 搜尋新增站點區塊 (預設收合，含備註時間輸入) -->
       <div id="addStopBox" class="hidden" style="background:#181818; padding:12px; border-radius:10px; border-left:5px solid #ffeb3b; display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:16px; color:#ffeb3b; font-weight:900;">搜尋要加入行程的地點：</div>
+        <div style="font-size:16px; color:#ffeb3b; font-weight:900;">1. 填寫預計時間或備註（選填）：</div>
+        <input id="itineraryNoteInput" type="text" placeholder="例如：11:30 吃午餐、西門集合" maxlength="30" style="font-size:17px; padding:11px; border-radius:8px; border:2px solid #555; background:#222; color:#fff;">
+        
+        <div style="font-size:16px; color:#ffeb3b; font-weight:900; margin-top:4px;">2. 搜尋要加入行程的地點：</div>
         <div class="search-input-row">
-          <input id="itinerarySearchInput" placeholder="例如：美濃民俗村" autocomplete="off">
+          <input id="itinerarySearchInput" type="text" placeholder="例如：美濃民俗村" autocomplete="off">
           <button id="itinerarySearchSubmit">搜尋</button>
         </div>
         <div id="itinerarySearchResults"></div>
@@ -514,7 +679,7 @@
         <div style="font-size:16px; color:#eee; font-weight:bold;">🎙️ 短語音留言（說話自動轉文字廣播）：</div>
         <button id="voiceRecordBtn" class="voice-btn">🎙️ 點擊開始說話</button>
         <div class="custom-msg-row">
-          <input id="customStatusInput" placeholder="或直接輸入簡短留言..." maxlength="30" autocomplete="off">
+          <input id="customStatusInput" type="text" placeholder="或直接輸入簡短留言..." maxlength="30" autocomplete="off">
           <button id="sendCustomStatusBtn">發送</button>
         </div>
       </div>
@@ -524,15 +689,31 @@
     </div>
   </div>
 
-  <!-- 🎯 集合點膠囊橫條 -->
-  <div id="targetBanner" class="hidden" title="點擊重新調整集合點視野">
-    <div class="t-info" id="focusTargetArea">
-      <div class="t-title-row">🚩 <span id="targetName">集合點</span> · <span id="targetDistVal" style="color:#ffeb3b;">--</span></div>
-      <div class="t-walk-row" id="targetWalkEst">計算時間中...</div>
+  <!-- 🎯 集合點 & 🅿️ 停車位置膠囊橫條區 -->
+  <div id="bannersContainer">
+    <!-- 🅿️ 停車位置橫條 -->
+    <div id="parkingBanner" class="floating-banner hidden" title="點擊查看停車位置">
+      <div class="t-info" id="focusParkingArea">
+        <div class="t-title-row">🅿️ <span id="parkingName">停車位置</span> · <span id="parkingDistVal" style="color:#ffeb3b;">--</span></div>
+        <div class="t-walk-row" id="parkingWalkEst">計算步行時間中...</div>
+      </div>
+      <div class="target-banner-actions">
+        <button id="parkingNavBtn" class="t-btn">找車導航</button>
+        <button id="clearParkingBtn" class="t-clear">清除</button>
+      </div>
     </div>
-    <div class="target-banner-actions">
-      <button id="targetNavBtn" class="t-btn">導航</button>
-      <button id="clearTargetBtn" class="t-clear">取消</button>
+
+    <!-- 🎯 集合點橫條 -->
+    <div id="targetBanner" class="floating-banner hidden" title="點擊重新調整集合點視野">
+      <div class="t-info" id="focusTargetArea">
+        <div class="t-title-row">🚩 <span id="targetName">集合點</span> · <span id="targetDistVal" style="color:#ffeb3b;">--</span></div>
+        <div class="t-note-row hidden" id="targetNoteRow"></div>
+        <div class="t-walk-row" id="targetWalkEst">計算時間中...</div>
+      </div>
+      <div class="target-banner-actions">
+        <button id="targetNavBtn" class="t-btn">導航</button>
+        <button id="clearTargetBtn" class="t-clear">取消</button>
+      </div>
     </div>
   </div>
 
@@ -541,7 +722,9 @@
     <button id="copyBtn" title="複製邀請連結">🔗 邀請</button>
     <button id="leaveBtn" title="離開活動">離開</button>
     <button id="sosBtn" class="ctrl-btn" title="一鍵發送求救信號">SOS</button>
+    <button id="leaderPanelBtn" class="ctrl-btn hidden" title="領隊管理與全體點名">👑<span style="font-size:11px;">管理</span></button>
     <button id="itineraryToggleBtn" class="ctrl-btn" title="今日行程清單與多站切換">📅<span style="font-size:11px;">行程</span></button>
+    <button id="parkingBtn" class="ctrl-btn" title="標記目前位置為停車處">🅿️<span style="font-size:11px;">停車</span></button>
     <button id="statusToggleBtn" class="ctrl-btn" title="設定狀態或短語音留言">💬<span style="font-size:11px;">狀態</span></button>
     <button id="locBtn" class="ctrl-btn" title="切換跟隨模式">◎<span style="font-size:11px;" id="locTxt">定位</span></button>
     <button id="searchToggleBtn" class="ctrl-btn" title="搜尋地點設為集合點">🔍<span style="font-size:11px;">找地點</span></button>
@@ -586,20 +769,30 @@
 
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
-    code: '', nickname: '', color: COLORS[0], topic: '', targetTopic: '', itineraryTopic: '',
+    code: '', nickname: '', color: COLORS[0],
+    topic: '', targetTopic: '', itineraryTopic: '', controlTopic: '', parkingTopic: '',
     myPos: null, map: null, meMarker: null, line: null,
     client: null, watchId: null, firstFix: false, joined: false,
     isSOS: false,
     isFollowing: false, 
     targetPos: null,    
     targetName: '集合點',
+    targetNote: '',
     targetMarker: null,
+    parkingPos: null,
+    parkingName: '停車位置',
+    parkingMarker: null,
     wakeLock: null,
     batteryLevel: null,
     isCharging: false,
     myStatus: '',
     itinerary: [],
-    itineraryUpdatedAt: 0
+    itineraryUpdatedAt: 0,
+    // 領隊管理與點名狀態
+    isLeader: false,
+    isLocked: false,
+    activeRollcallId: null,
+    myRollcallAckId: null
   };
   const peers = new Map();   
 
@@ -660,8 +853,91 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
+  /* ================= 👑 領隊權限檢查與 UI 更新 ================= */
+  function canEditGroupData() {
+    if (!state.isLocked) return true;
+    return state.isLeader;
+  }
+
+  function updateLockUI() {
+    const lockChip = $('#lockIndicatorChip');
+    const toggleBtn = $('#toggleLockBtn');
+    const addStopBtn = $('#addStopToggleBtn');
+    const lockedHint = $('#itineraryLockedHint');
+    const clearTargetBtn = $('#clearTargetBtn');
+
+    if (state.isLocked) {
+      lockChip.classList.remove('hidden');
+      if (toggleBtn) {
+        toggleBtn.textContent = '🔒 目前：已鎖定';
+        toggleBtn.style.background = '#d32f2f';
+        toggleBtn.style.borderColor = '#ff8a80';
+      }
+      if (!state.isLeader) {
+        addStopBtn.classList.add('hidden');
+        lockedHint.classList.remove('hidden');
+        clearTargetBtn.classList.add('hidden');
+      } else {
+        addStopBtn.classList.remove('hidden');
+        lockedHint.classList.add('hidden');
+        clearTargetBtn.classList.remove('hidden');
+      }
+    } else {
+      lockChip.classList.add('hidden');
+      if (toggleBtn) {
+        toggleBtn.textContent = '🔓 目前：未鎖定';
+        toggleBtn.style.background = '#2e7d32';
+        toggleBtn.style.borderColor = '#00e676';
+      }
+      addStopBtn.classList.remove('hidden');
+      lockedHint.classList.add('hidden');
+      clearTargetBtn.classList.remove('hidden');
+    }
+    renderItineraryList();
+  }
+
+  function broadcastControlState(useRetain = true) {
+    if (!state.client || !state.client.connected) return;
+    const msg = JSON.stringify({
+      type: 'group_control',
+      isLocked: state.isLocked,
+      activeRollcallId: state.activeRollcallId,
+      senderId: state.id,
+      leaderName: state.nickname
+    });
+    state.client.publish(state.controlTopic, msg, { qos: 0, retain: !!useRetain });
+  }
+
+  function updateRollcallUI() {
+    const box = $('#rollcallStatusBox');
+    if (!state.activeRollcallId) {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+
+    const allMembers = [
+      { id: state.id, nickname: state.nickname + ' (我)', checked: state.myRollcallAckId === state.activeRollcallId }
+    ];
+    peers.forEach(p => {
+      allMembers.push({
+        id: p.id,
+        nickname: p.nickname,
+        checked: p.rollcallAckId === state.activeRollcallId
+      });
+    });
+
+    const checkedCount = allMembers.filter(m => m.checked).length;
+    $('#rollcallSummaryText').textContent = `點名進度：${checkedCount} / ${allMembers.length} 人已確認`;
+    $('#rollcallMembersList').innerHTML = allMembers.map(m => `
+      <span class="rollcall-member-tag ${m.checked ? 'checked' : 'pending'}">
+        ${m.checked ? '✅' : '⏳'} ${esc(m.nickname)}
+      </span>
+    `).join('');
+  }
+
   /* ================= 🧭 智慧導航處理函式 (iOS 彈選單 / Android 直接跳 Google) ================= */
-  let pendingNavDest = null; // 暫存準備導航的目標經緯度與名稱
+  let pendingNavDest = null;
 
   function checkIsIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -669,14 +945,10 @@
 
   window.openSmartNavigation = function(lat, lng, destName) {
     pendingNavDest = { lat, lng, destName: destName || '目的地' };
-    
-    // 如果是 Android 或非 iOS 裝置，直接進入 Google 導航地圖
     if (!checkIsIOS()) {
       launchGoogleNav(lat, lng);
       return;
     }
-
-    // 如果是 iPhone / iOS 裝置，彈出選擇選單讓用戶自由選擇
     $('#navPickerSub').textContent = `導航目的地：${destName || '所選位置'}`;
     $('#navPickerModal').classList.add('show');
   };
@@ -691,13 +963,11 @@
   }
 
   function launchAppleNav(lat, lng, destName) {
-    // Apple 地圖 URL scheme (支援經緯度與目標標籤)
     let url = `https://maps.apple.com/?daddr=${lat},${lng}`;
     if (destName) url += `&dirflg=w&q=${encodeURIComponent(destName)}`;
     window.open(url, '_blank', 'noopener');
   }
 
-  // 彈出選單按鈕事件綁定
   $('#navGoogleBtn').addEventListener('click', () => {
     $('#navPickerModal').classList.remove('show');
     if (pendingNavDest) launchGoogleNav(pendingNavDest.lat, pendingNavDest.lng);
@@ -726,7 +996,10 @@
         itinerary: state.itinerary,
         itineraryUpdatedAt: state.itineraryUpdatedAt,
         targetPos: state.targetPos,
-        targetName: state.targetName
+        targetName: state.targetName,
+        targetNote: state.targetNote,
+        parkingPos: state.parkingPos,
+        parkingName: state.parkingName
       };
       localStorage.setItem('geoact_cache_' + state.code, JSON.stringify(cache));
     } catch (e) {}
@@ -744,18 +1017,115 @@
         renderItineraryList();
       }
       if (cache.targetPos && typeof cache.targetPos.lat === 'number') {
-        setTargetPos(cache.targetPos.lat, cache.targetPos.lng, cache.targetName || '集合點', false);
+        setTargetPos(cache.targetPos.lat, cache.targetPos.lng, cache.targetName || '集合點', false, true, cache.targetNote || '');
+      }
+      if (cache.parkingPos && typeof cache.parkingPos.lat === 'number') {
+        setParkingPos(cache.parkingPos.lat, cache.parkingPos.lng, cache.parkingName || '停車位置', false);
       }
     } catch (e) {}
   }
 
-  /* ================= 📅 今日行程管理、順序調整與一鍵切換 ================= */
+  /* ================= 🅿️ 停車位置標記管理 ================= */
+  function setParkingPos(lat, lng, name, broadcast, useRetain = true) {
+    state.parkingPos = { lat, lng };
+    state.parkingName = name || '停車位置';
+    
+    if (!state.parkingMarker && state.map) {
+      const pIcon = L.divIcon({
+        className: '',
+        html: '<div class="parking-pin">🅿️</div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+      state.parkingMarker = L.marker([lat, lng], { icon: pIcon })
+        .addTo(state.map)
+        .on('click', focusParking);
+    } else if (state.parkingMarker) {
+      state.parkingMarker.setLatLng([lat, lng]);
+    }
+
+    saveLocalCache();
+    updateParkingUI();
+
+    if (broadcast && state.client && state.client.connected) {
+      const msg = JSON.stringify({ type: 'set_parking', lat, lng, name: state.parkingName, id: state.id });
+      state.client.publish(state.parkingTopic, msg, { qos: 0, retain: !!useRetain });
+      if (useRetain) {
+        toast('🅿️ 已標記停車位置並同步給同伴！');
+      }
+    }
+  }
+
+  function clearParkingPos(broadcast) {
+    state.parkingPos = null;
+    state.parkingName = '停車位置';
+    if (state.parkingMarker && state.map) {
+      state.map.removeLayer(state.parkingMarker);
+      state.parkingMarker = null;
+    }
+    saveLocalCache();
+    updateParkingUI();
+
+    if (broadcast && state.client && state.client.connected) {
+      state.client.publish(state.parkingTopic, '', { qos: 0, retain: true });
+      toast('已清除停車位置標記');
+    }
+  }
+
+  function updateParkingUI() {
+    const banner = $('#parkingBanner');
+    if (!state.parkingPos) {
+      banner.classList.add('hidden');
+      return;
+    }
+    banner.classList.remove('hidden');
+    const dist = state.myPos ? haversine(state.myPos, state.parkingPos) : null;
+    $('#parkingName').textContent = state.parkingName;
+    $('#parkingDistVal').textContent = fmtDistSimple(dist);
+    $('#parkingWalkEst').textContent = fmtTimeEstimate(dist);
+  }
+
+  function focusParking() {
+    if (!state.parkingPos || !state.map) return;
+    clearLine();
+    setFollowMode(false);
+    const pLoc = [state.parkingPos.lat, state.parkingPos.lng];
+    if (state.myPos) {
+      const mine = [state.myPos.lat, state.myPos.lng];
+      state.map.fitBounds(L.latLngBounds([mine, pLoc]).pad(0.35));
+    } else {
+      state.map.setView(pLoc, 17);
+    }
+  }
+
+  $('#parkingBtn').addEventListener('click', () => {
+    if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再標記停車處');
+    const note = prompt('請輸入停車位置備註（例如：B2 18號車位、廟前停車場）：', `${state.nickname} 的停車處`);
+    if (note === null) return;
+    setParkingPos(state.myPos.lat, state.myPos.lng, note.trim() || '停車位置', true);
+  });
+
+  $('#focusParkingArea').addEventListener('click', focusParking);
+  $('#parkingNavBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (state.parkingPos) {
+      openSmartNavigation(state.parkingPos.lat, state.parkingPos.lng, state.parkingName);
+    }
+  });
+  $('#clearParkingBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearParkingPos(true);
+  });
+
+  /* ================= 📅 今日行程管理、時間備註、順序調整與一鍵切換 ================= */
   function renderItineraryList() {
     const container = $('#itineraryListContainer');
     if (!state.itinerary.length) {
       container.innerHTML = '<div style="color:#ccc; font-size:18px; text-align:center; padding:30px 10px;">目前尚無行程站點，請點擊上方「＋ 新增站點」！</div>';
       return;
     }
+
+    const editable = canEditGroupData();
 
     container.innerHTML = state.itinerary.map((stop, idx) => {
       const isActive = state.targetPos && Math.abs(state.targetPos.lat - stop.lat) < 0.0001 && Math.abs(state.targetPos.lng - stop.lng) < 0.0001;
@@ -767,19 +1137,30 @@
 
       const isFirst = idx === 0;
       const isLast = idx === state.itinerary.length - 1;
+      const noteHtml = stop.note 
+        ? `<div class="itinerary-note-badge">🕒 ${esc(stop.note)}</div>` 
+        : '';
+
+      const adminControls = editable ? `
+        <button class="itinerary-move-btn" ${isFirst ? 'disabled' : ''} onclick="window.moveItineraryStop(${idx}, -1)" title="往上移一站">⬆️</button>
+        <button class="itinerary-move-btn" ${isLast ? 'disabled' : ''} onclick="window.moveItineraryStop(${idx}, 1)" title="往下移一站">⬇️</button>
+        <button class="itinerary-edit-btn" onclick="window.editItineraryNote(${idx})" title="編輯時間或備註">✏️ 備註</button>
+        <button class="itinerary-set-btn" onclick="window.selectItineraryStop(${idx})">設為集合點</button>
+        <button class="itinerary-del-btn" onclick="window.removeItineraryStop(${idx})">刪除</button>
+      ` : `
+        <button class="itinerary-set-btn" style="background:#448aff;color:#fff;" onclick="window.openSmartNavigation(${stop.lat}, ${stop.lng}, '${esc(stop.name)}')">🧭 導航前往</button>
+      `;
 
       return `
         <div class="itinerary-item ${isActive ? 'active-stop' : ''}">
           <div class="itinerary-title">
             第 ${idx + 1} 站：${esc(stop.name)}${isActive ? '<span class="active-badge">集合中</span>' : ''}
           </div>
+          ${noteHtml}
           <div class="itinerary-bottom-row">
             <div class="itinerary-dist">${distText}</div>
             <div class="itinerary-actions">
-              <button class="itinerary-move-btn" ${isFirst ? 'disabled' : ''} onclick="window.moveItineraryStop(${idx}, -1)" title="往上移一站">⬆️</button>
-              <button class="itinerary-move-btn" ${isLast ? 'disabled' : ''} onclick="window.moveItineraryStop(${idx}, 1)" title="往下移一站">⬇️</button>
-              <button class="itinerary-set-btn" onclick="window.selectItineraryStop(${idx})">設為集合點</button>
-              <button class="itinerary-del-btn" onclick="window.removeItineraryStop(${idx})">刪除</button>
+              ${adminControls}
             </div>
           </div>
         </div>
@@ -787,7 +1168,22 @@
     }).join('');
   }
 
+  window.editItineraryNote = function(idx) {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
+    const stop = state.itinerary[idx];
+    if (!stop) return;
+    const newNote = prompt(`編輯「${stop.name}」的時間與備註：`, stop.note || '');
+    if (newNote === null) return;
+    stop.note = newNote.trim();
+    state.itineraryUpdatedAt = Date.now();
+    saveLocalCache();
+    broadcastItinerary(true);
+    renderItineraryList();
+    toast('✅ 已更新站點備註');
+  };
+
   window.moveItineraryStop = function(idx, direction) {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
     const targetIdx = idx + direction;
     if (targetIdx < 0 || targetIdx >= state.itinerary.length) return;
     
@@ -803,14 +1199,16 @@
   };
 
   window.selectItineraryStop = function(idx) {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定集合點變更');
     const stop = state.itinerary[idx];
     if (!stop) return;
-    setTargetPos(stop.lat, stop.lng, `第 ${idx + 1} 站：${stop.name}`, true);
+    setTargetPos(stop.lat, stop.lng, `第 ${idx + 1} 站：${stop.name}`, true, true, stop.note || '');
     $('#itineraryModal').classList.add('hidden');
     focusTarget();
   };
 
   window.removeItineraryStop = function(idx) {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
     state.itinerary.splice(idx, 1);
     state.itineraryUpdatedAt = Date.now();
     saveLocalCache();
@@ -819,14 +1217,15 @@
     toast('已移除該行程站點');
   };
 
-  function addItineraryStop(name, lat, lng) {
-    state.itinerary.push({ id: 's' + Math.random().toString(36).slice(2, 8), name, lat, lng });
+  function addItineraryStop(name, lat, lng, note) {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
+    state.itinerary.push({ id: 's' + Math.random().toString(36).slice(2, 8), name, lat, lng, note: (note || '').trim() });
     state.itineraryUpdatedAt = Date.now();
     saveLocalCache();
     broadcastItinerary(true);
     renderItineraryList();
     if (state.itinerary.length === 1 && !state.targetPos) {
-      setTargetPos(lat, lng, `第 1 站：${name}`, true);
+      setTargetPos(lat, lng, `第 1 站：${name}`, true, true, note || '');
     }
     toast(`✅ 已加入行程：${name}`);
   }
@@ -884,8 +1283,10 @@
           </div>
         `;
         div.addEventListener('click', () => {
-          addItineraryStop(mainTitle, itemLat, itemLng);
+          const noteVal = $('#itineraryNoteInput').value.trim();
+          addItineraryStop(mainTitle, itemLat, itemLng, noteVal);
           $('#itinerarySearchInput').value = '';
+          $('#itineraryNoteInput').value = '';
           resultsEl.innerHTML = '';
           $('#addStopBox').classList.add('hidden');
         });
@@ -1012,6 +1413,10 @@
     }).addTo(state.map);
 
     state.map.on('contextmenu', function(e) {
+      if (!canEditGroupData()) {
+        toast('🔒 領隊已鎖定集合點變更');
+        return;
+      }
       setTargetPos(e.latlng.lat, e.latlng.lng, '自訂地點', true);
     });
 
@@ -1021,17 +1426,22 @@
 
     peers.forEach(p => addPeerMarker(p));     
     if (state.targetPos && !state.targetMarker) {
-      setTargetPos(state.targetPos.lat, state.targetPos.lng, state.targetName, false);
+      setTargetPos(state.targetPos.lat, state.targetPos.lng, state.targetName, false, true, state.targetNote);
+    }
+    if (state.parkingPos && !state.parkingMarker) {
+      setParkingPos(state.parkingPos.lat, state.parkingPos.lng, state.parkingName, false);
     }
   }
 
-  function iconFor(nickname, color, isMe, isSOS, isOffline, statusText) {
+  function iconFor(nickname, color, isMe, isSOS, isOffline, statusText, isLeader) {
     const sosClass = isSOS ? ' sos' : '';
     const meClass = isMe ? ' me' : '';
     const offClass = (!isMe && isOffline) ? ' offline' : '';
+    const leaderClass = isLeader ? ' leader' : '';
     let prefix = '';
     if (isSOS) prefix = '🆘 ';
     else if (!isMe && isOffline) prefix = '⚠️ ';
+    else if (isLeader) prefix = '👑 ';
 
     const statusHtml = statusText 
       ? `<div class="pin-status">${esc(statusText)}</div>` 
@@ -1040,7 +1450,7 @@
     return L.divIcon({
       className: '',
       html:
-        '<div class="pin' + meClass + sosClass + offClass + '">' +
+        '<div class="pin' + meClass + sosClass + offClass + leaderClass + '">' +
           '<div class="dot" style="background:' + (isSOS ? '#ff1744' : color) + '"></div>' +
           '<div class="name">' + prefix + esc(nickname) + '</div>' +
           statusHtml +
@@ -1055,20 +1465,20 @@
     const ll = [state.myPos.lat, state.myPos.lng];
     if (!state.meMarker) {
       state.meMarker = L.marker(ll, {
-        icon: iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus),
+        icon: iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus, state.isLeader),
         zIndexOffset: 1000,
         interactive: false
       }).addTo(state.map);
     } else {
       state.meMarker.setLatLng(ll);
-      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus));
+      state.meMarker.setIcon(iconFor(state.nickname, '#00e676', true, state.isSOS, false, state.myStatus, state.isLeader));
     }
   }
 
   function addPeerMarker(p) {
     if (!state.map || p.marker) return;
     const isOffline = (Date.now() - p.ts) > OFFLINE_MS;
-    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status) })
+    p.marker = L.marker([p.lat, p.lng], { icon: iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status, p.isLeader) })
       .addTo(state.map)
       .on('click', () => focusPeer(p.id));
   }
@@ -1132,9 +1542,15 @@
     }
   }
 
-  function setTargetPos(lat, lng, name, broadcast, useRetain = true) {
+  function setTargetPos(lat, lng, name, broadcast, useRetain = true, note = '') {
+    if (broadcast && !canEditGroupData()) {
+      toast('🔒 領隊已鎖定集合點變更');
+      return;
+    }
     state.targetPos = { lat, lng };
     state.targetName = name || '集合點';
+    state.targetNote = note || '';
+
     if (!state.targetMarker && state.map) {
       const targetIcon = L.divIcon({
         className: 'target-pin',
@@ -1154,7 +1570,7 @@
     renderItineraryList();
     
     if (broadcast && state.client && state.client.connected) {
-      const msg = JSON.stringify({ type: 'set_target', lat, lng, name: state.targetName, id: state.id });
+      const msg = JSON.stringify({ type: 'set_target', lat, lng, name: state.targetName, note: state.targetNote, id: state.id });
       state.client.publish(state.targetTopic, msg, { qos: 0, retain: !!useRetain });
       if (useRetain) {
         toast('🎯 已設定全體集合點：' + state.targetName);
@@ -1164,8 +1580,13 @@
   }
 
   function clearTargetPos(broadcast) {
+    if (broadcast && !canEditGroupData()) {
+      toast('🔒 領隊已鎖定集合點變更');
+      return;
+    }
     state.targetPos = null;
     state.targetName = '集合點';
+    state.targetNote = '';
     if (state.targetMarker && state.map) {
       state.map.removeLayer(state.targetMarker);
       state.targetMarker = null;
@@ -1193,9 +1614,16 @@
     $('#targetName').textContent = state.targetName;
     $('#targetDistVal').textContent = fmtDistSimple(dist);
     $('#targetWalkEst').textContent = fmtTimeEstimate(dist);
+
+    const noteRow = $('#targetNoteRow');
+    if (state.targetNote) {
+      noteRow.textContent = '🕒 ' + state.targetNote;
+      noteRow.classList.remove('hidden');
+    } else {
+      noteRow.classList.add('hidden');
+    }
   }
 
-  // 集合點橫條導航按鈕綁定
   $('#targetNavBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     if (state.targetPos) {
@@ -1230,6 +1658,8 @@
         id: m.id, nickname: m.nickname || '同伴',
         color: hashColor(m.id),
         lat: m.lat, lng: m.lng, isSOS: !!m.isSOS,
+        isLeader: !!m.isLeader,
+        rollcallAckId: m.rollcallAckId || null,
         bat: typeof m.bat === 'number' ? m.bat : null,
         chg: !!m.chg,
         status: newStatus,
@@ -1240,13 +1670,15 @@
     } else {
       if (m.nickname && m.nickname !== p.nickname) p.nickname = m.nickname;
       p.lat = m.lat; p.lng = m.lng; p.isSOS = !!m.isSOS;
+      p.isLeader = !!m.isLeader;
+      if (m.rollcallAckId !== undefined) p.rollcallAckId = m.rollcallAckId;
       if (typeof m.bat === 'number') p.bat = m.bat;
       p.chg = !!m.chg;
       p.status = newStatus;
       p.ts = Date.now();
       if (p.marker) {
         p.marker.setLatLng([m.lat, m.lng]);
-        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, false, p.status));
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, false, p.status, p.isLeader));
       }
     }
 
@@ -1264,6 +1696,7 @@
     }
 
     renderPeers();
+    updateRollcallUI();
   }
 
   function removePeer(id) {
@@ -1272,6 +1705,7 @@
     if (p.marker && state.map) state.map.removeLayer(p.marker);
     peers.delete(id);
     renderPeers();
+    updateRollcallUI();
   }
 
   /* ================= 列表渲染 ================= */
@@ -1285,7 +1719,7 @@
     const list = [...peers.values()].map(p => {
       const isOffline = (now - p.ts) > OFFLINE_MS;
       if (p.marker) {
-        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status));
+        p.marker.setIcon(iconFor(p.nickname, p.color, false, p.isSOS, isOffline, p.status, p.isLeader));
       }
       return {
         ...p,
@@ -1294,6 +1728,7 @@
       };
     }).sort((a, b) => {
       if (a.isSOS !== b.isSOS) return a.isSOS ? -1 : 1; 
+      if (a.isLeader !== b.isLeader) return a.isLeader ? -1 : 1;
       return (a.dist ?? Infinity) - (b.dist ?? Infinity);
     });
 
@@ -1312,6 +1747,9 @@
         }
       }
 
+      const leaderTag = p.isLeader ? `<span class="leader-badge">👑 領隊</span>` : '';
+      const rollcallTag = (state.activeRollcallId && p.rollcallAckId === state.activeRollcallId)
+        ? `<span class="rollcall-ok-tag">🙋‍♂️ 已點名</span>` : '';
       const offlineTag = p.isOffline ? `<span class="offline-tag">⚠️ 訊號中斷</span>` : '';
       const timeStatus = p.isOffline 
         ? `<span style="color:#ff9100;">訊號中斷中 (最後更新: ${ago(p.ts)})</span>` 
@@ -1327,6 +1765,8 @@
         <div class="pinfo">
           <div class="pname">
             ${esc(p.nickname)}
+            ${leaderTag}
+            ${rollcallTag}
             ${p.isSOS ? '<span class="sos-tag">SOS 求救中</span>' : ''}
             ${offlineTag}
             ${batTag}
@@ -1410,7 +1850,7 @@
     sendPos();
   }
 
-  /* ================= MQTT 即時同步 (自動無縫帶入舊資料) ================= */
+  /* ================= MQTT 即時同步 ================= */
   function send(type, extra) {
     if (!state.client || !state.client.connected) return;
     const msg = Object.assign({
@@ -1426,6 +1866,8 @@
       lng: state.myPos.lng, 
       acc: state.myPos.acc, 
       isSOS: state.isSOS,
+      isLeader: state.isLeader,
+      rollcallAckId: state.myRollcallAckId,
       bat: state.batteryLevel,
       chg: state.isCharging,
       status: state.myStatus
@@ -1448,7 +1890,9 @@
       setNet(true);
       state.client.subscribe(state.topic, { qos: 0 });
       state.client.subscribe(state.targetTopic, { qos: 0 });
-      state.client.subscribe(state.itineraryTopic, { qos: 0 }, err => {
+      state.client.subscribe(state.itineraryTopic, { qos: 0 });
+      state.client.subscribe(state.controlTopic, { qos: 0 });
+      state.client.subscribe(state.parkingTopic, { qos: 0 }, err => {
         if (!err) {
           send('hello');        
           sendPos();            
@@ -1458,6 +1902,52 @@
 
     state.client.on('message', (topic, buf) => {
       const payload = buf.toString();
+
+      // 接收領隊控制與點名廣播
+      if (topic === state.controlTopic) {
+        if (!payload) return;
+        try {
+          const c = JSON.parse(payload);
+          if (c && c.type === 'group_control') {
+            if (typeof c.isLocked === 'boolean' && c.isLocked !== state.isLocked) {
+              state.isLocked = c.isLocked;
+              updateLockUI();
+              if (c.senderId !== state.id) {
+                toast(state.isLocked ? '🔒 領隊已鎖定行程與集合點編輯' : '🔓 領隊已解除行程鎖定');
+              }
+            }
+            if (c.activeRollcallId !== state.activeRollcallId) {
+              state.activeRollcallId = c.activeRollcallId;
+              updateRollcallUI();
+              renderPeers();
+              if (state.activeRollcallId && !state.isLeader && state.myRollcallAckId !== state.activeRollcallId) {
+                $('#rollcallAlertTitle').textContent = `📣 領隊「${c.leaderName || '領隊'}」發起集合點名！`;
+                $('#rollcallAlertModal').classList.remove('hidden');
+              } else if (!state.activeRollcallId) {
+                $('#rollcallAlertModal').classList.add('hidden');
+              }
+            }
+          }
+        } catch(e){}
+        return;
+      }
+
+      // 接收停車位置同步
+      if (topic === state.parkingTopic) {
+        if (!payload) {
+          clearParkingPos(false);
+          return;
+        }
+        try {
+          const pk = JSON.parse(payload);
+          if (pk && pk.type === 'set_parking' && typeof pk.lat === 'number') {
+            if (pk.id === state.id) return;
+            setParkingPos(pk.lat, pk.lng, pk.name, false);
+            toast(`🅿️ 同伴已標記停車處：${pk.name}`);
+          }
+        } catch(e){}
+        return;
+      }
 
       // 接收行程清單同步
       if (topic === state.itineraryTopic) {
@@ -1492,7 +1982,7 @@
           const t = JSON.parse(payload);
           if (t && t.type === 'set_target' && typeof t.lat === 'number') {
             if (t.id === state.id) return;
-            setTargetPos(t.lat, t.lng, t.name, false);
+            setTargetPos(t.lat, t.lng, t.name, false, true, t.note || '');
           }
         } catch(e){}
         return;
@@ -1505,8 +1995,11 @@
       if (m.id !== state.id) {
         if (m.type === 'hello') {
           sendPos();
-          if (state.itinerary.length > 0) {
-            broadcastItinerary(false);
+          if (state.itinerary.length > 0) broadcastItinerary(false);
+          if (state.isLeader) broadcastControlState(false);
+          if (state.parkingPos) {
+            const pkMsg = JSON.stringify({ type: 'set_parking', lat: state.parkingPos.lat, lng: state.parkingPos.lng, name: state.parkingName, id: state.id });
+            state.client.publish(state.parkingTopic, pkMsg, { qos: 0, retain: false });
           }
           if (state.targetPos) {
             const targetMsg = JSON.stringify({
@@ -1514,6 +2007,7 @@
               lat: state.targetPos.lat,
               lng: state.targetPos.lng,
               name: state.targetName,
+              note: state.targetNote,
               id: state.id
             });
             state.client.publish(state.targetTopic, targetMsg, { qos: 0, retain: false });
@@ -1554,6 +2048,7 @@
     }
 
     updateTargetUI();
+    updateParkingUI();
     renderItineraryList();
     sendPos();
     renderPeers();
@@ -1586,23 +2081,33 @@
   function join() {
     const code = $('#codeInput').value.trim();
     const nick = $('#nickInput').value.trim();
+    const isLeader = $('#leaderCheckbox').checked;
 
     if (!code) { toast('請輸入活動代號'); $('#codeInput').focus(); return; }
     if (!nick) { toast('請輸入你的暱稱'); $('#nickInput').focus(); return; }
 
-    const safeCode = code.replace(/[^\w\u4e00-\u9fa5-]/g, '_');
+    const safeCode = code.replace(/[^\w一-龥-]/g, '_');
     state.code = code;
     state.nickname = nick;
+    state.isLeader = isLeader;
     state.topic = TOPIC_PREFIX + safeCode;
     state.targetTopic = TOPIC_PREFIX + safeCode + '/target';
     state.itineraryTopic = TOPIC_PREFIX + safeCode + '/itinerary';
+    state.controlTopic = TOPIC_PREFIX + safeCode + '/control';
+    state.parkingTopic = TOPIC_PREFIX + safeCode + '/parking';
     state.color = hashColor(state.id);
 
     $('#topCode').textContent = code;
+    if (state.isLeader) {
+      $('#leaderChip').classList.remove('hidden');
+      $('#leaderPanelBtn').classList.remove('hidden');
+    }
+
     $('#joinScreen').classList.add('hidden');
     $('#mapScreen').classList.remove('hidden');
 
     loadLocalCache();
+    updateLockUI();
 
     state.joined = true;
     initBatteryMonitor();
@@ -1667,9 +2172,57 @@
     else $('#itineraryModal').classList.remove('hidden');
   });
 
+  // 領隊管理視窗與點名事件綁定
+  $('#leaderPanelBtn').addEventListener('click', () => {
+    updateLockUI();
+    updateRollcallUI();
+    $('#leaderModal').classList.remove('hidden');
+  });
+  $('#leaderChip').addEventListener('click', () => {
+    updateLockUI();
+    updateRollcallUI();
+    $('#leaderModal').classList.remove('hidden');
+  });
+  $('#closeLeaderModal').addEventListener('click', () => {
+    $('#leaderModal').classList.add('hidden');
+  });
+  $('#toggleLockBtn').addEventListener('click', () => {
+    if (!state.isLeader) return;
+    state.isLocked = !state.isLocked;
+    updateLockUI();
+    broadcastControlState(true);
+    toast(state.isLocked ? '🔒 已鎖定行程與集合點' : '🔓 已開放全體編輯');
+  });
+  $('#startRollcallBtn').addEventListener('click', () => {
+    if (!state.isLeader) return;
+    state.activeRollcallId = 'rc_' + Date.now();
+    state.myRollcallAckId = state.activeRollcallId;
+    updateRollcallUI();
+    sendPos();
+    broadcastControlState(true);
+    toast('📣 已發起全體集合點名！');
+  });
+  $('#endRollcallBtn').addEventListener('click', () => {
+    if (!state.isLeader) return;
+    state.activeRollcallId = null;
+    updateRollcallUI();
+    broadcastControlState(true);
+    toast('已結束本次點名');
+  });
+  $('#confirmRollcallBtn').addEventListener('click', () => {
+    state.myRollcallAckId = state.activeRollcallId;
+    $('#rollcallAlertModal').classList.add('hidden');
+    setMyStatus('🙋‍♂️ 已完成點名簽到！');
+    sendPos();
+  });
+  $('#dismissRollcallBtn').addEventListener('click', () => {
+    $('#rollcallAlertModal').classList.add('hidden');
+  });
+
   // 行程清單視窗綁定
   $('#itineraryToggleBtn').addEventListener('click', () => {
     $('#itineraryModal').classList.remove('hidden');
+    updateLockUI();
     renderItineraryList();
   });
   $('#closeItineraryModal').addEventListener('click', () => {
@@ -1677,9 +2230,10 @@
     $('#addStopBox').classList.add('hidden');
   });
   $('#addStopToggleBtn').addEventListener('click', () => {
+    if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
     const box = $('#addStopBox');
     box.classList.toggle('hidden');
-    if (!box.classList.contains('hidden')) $('#itinerarySearchInput').focus();
+    if (!box.classList.contains('hidden')) $('#itineraryNoteInput').focus();
   });
   $('#itinerarySearchSubmit').addEventListener('click', () => {
     searchItineraryLocation($('#itinerarySearchInput').value);
@@ -1711,6 +2265,10 @@
   
   // 單一搜尋視窗綁定
   $('#searchToggleBtn').addEventListener('click', () => {
+    if (!canEditGroupData()) {
+      toast('🔒 領隊已鎖定集合點變更');
+      return;
+    }
     $('#searchModal').classList.remove('hidden');
     $('#searchInput').focus();
   });
@@ -1727,7 +2285,7 @@
   })();
 
   setInterval(() => { sendPos(); }, PING_MS);        
-  setInterval(() => { renderPeers(); }, 10000);
+  setInterval(() => { renderPeers(); updateRollcallUI(); }, 10000);
 
 })();
 </script>
