@@ -177,7 +177,7 @@
     flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     display: flex; flex-direction: column; gap: 10px; margin-top: 2px;
   }
-  #itinerarySearchResults { max-height: 32vh; }
+  #itinerarySearchResults { max-height: 36vh; }
 
   .search-item {
     background: #1a1a1a; border-bottom: 2px solid #333; padding: 13px 12px; border-radius: 10px;
@@ -648,12 +648,9 @@
         🔒 領隊已開啟「防誤操作鎖定」，目前僅供檢視與導航。
       </div>
 
-      <!-- 搜尋新增站點區塊 (預設收合，含備註時間輸入) -->
+      <!-- 搜尋新增站點區塊 (預設收合，先搜尋決定地點，點選後才詢問備註時間) -->
       <div id="addStopBox" class="hidden" style="background:#181818; padding:12px; border-radius:10px; border-left:5px solid #ffeb3b; display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:16px; color:#ffeb3b; font-weight:900;">1. 填寫預計時間或備註（選填）：</div>
-        <input id="itineraryNoteInput" type="text" placeholder="例如：11:30 吃午餐、西門集合" maxlength="30" style="font-size:17px; padding:11px; border-radius:8px; border:2px solid #555; background:#222; color:#fff;">
-        
-        <div style="font-size:16px; color:#ffeb3b; font-weight:900; margin-top:4px;">2. 搜尋要加入行程的地點：</div>
+        <div style="font-size:16px; color:#ffeb3b; font-weight:900;">搜尋要加入行程的地點：</div>
         <div class="search-input-row">
           <input id="itinerarySearchInput" type="text" placeholder="例如：美濃民俗村" autocomplete="off">
           <button id="itinerarySearchSubmit">搜尋</button>
@@ -1056,7 +1053,6 @@
         state.parkingPos = { lat: pk.lat, lng: pk.lng };
         state.parkingName = pk.name || '我的停車位置';
         state.parkingTime = pk.time || '';
-        // 載入時保持隱藏（state.parkingRevealed = false），不佔用螢幕與地圖空間
         state.parkingRevealed = false;
         updateParkingUI();
       }
@@ -1068,7 +1064,6 @@
     state.parkingPos = { lat, lng };
     state.parkingName = name || '我的停車位置';
     state.parkingTime = nowTime;
-    // 設定完成後預設收起，不常駐顯示在螢幕上
     state.parkingRevealed = false;
     hideParkingLayers();
     savePrivateParkingStorage();
@@ -1119,7 +1114,6 @@
     const btnTxt = $('#parkingBtnTxt');
     const banner = $('#parkingBanner');
 
-    // 更新右側按鈕外觀：未停車顯示「🅿️ 停車」，已停車顯示綠色「🚗 找車」
     if (state.parkingPos) {
       btn.classList.add('has-parking');
       btn.innerHTML = '🚗<span style="font-size:11px;" id="parkingBtnTxt">找車</span>';
@@ -1130,7 +1124,6 @@
       btn.title = '記錄目前位置為個人停車處（僅自己可見）';
     }
 
-    // 只有在「有停車紀錄」且「使用者主動喚醒 (parkingRevealed)」時，才在螢幕與地圖上顯示
     if (!state.parkingPos || !state.parkingRevealed) {
       banner.classList.add('hidden');
       hideParkingLayers();
@@ -1144,7 +1137,6 @@
     $('#parkingDistVal').textContent = fmtDistSimple(dist);
     $('#parkingWalkEst').textContent = fmtTimeEstimate(dist);
 
-    // 繪製地圖上的 🅿️ 專屬標記
     if (state.map) {
       const pLoc = [state.parkingPos.lat, state.parkingPos.lng];
       if (!state.parkingMarker) {
@@ -1161,7 +1153,6 @@
         state.parkingMarker.setLatLng(pLoc);
       }
 
-      // 若有目前位置，繪製藍色虛線引導至愛車
       if (state.myPos) {
         const mine = [state.myPos.lat, state.myPos.lng];
         if (!state.parkingLine) {
@@ -1188,7 +1179,6 @@
     }
   }
 
-  // 右側按鈕點擊：若尚未停車 -> 記錄車位；若已停車 -> 切換叫出/收起停車標記
   $('#parkingBtn').addEventListener('click', () => {
     if (!state.parkingPos) {
       if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再記錄停車處');
@@ -1208,7 +1198,6 @@
   $('#parkingNavBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     if (state.parkingPos) {
-      // 維持原有系統智慧選擇方式（iOS 彈選 Apple/Google 地圖，Android 直接開 Google 地圖）
       openSmartNavigation(state.parkingPos.lat, state.parkingPos.lng, state.parkingName);
     }
   });
@@ -1386,11 +1375,13 @@
             <span style="color:#ff9100; font-size:16px; font-weight:900; white-space:nowrap;">＋ 加入行程</span>
           </div>
         `;
+        // 點選地點後，直接決定加入站點，隨後彈出詢問預計時間或備註
         div.addEventListener('click', () => {
-          const noteVal = $('#itineraryNoteInput').value.trim();
+          const noteVal = prompt(`已選擇「${mainTitle}」。\n請輸入預計到達時間或備註（選填，可直接按確定略過）：`, '');
+          if (noteVal === null) return; // 點擊取消則不加入
+          
           addItineraryStop(mainTitle, itemLat, itemLng, noteVal);
           $('#itinerarySearchInput').value = '';
-          $('#itineraryNoteInput').value = '';
           resultsEl.innerHTML = '';
           $('#addStopBox').classList.add('hidden');
         });
@@ -1532,7 +1523,6 @@
     if (state.targetPos && !state.targetMarker) {
       setTargetPos(state.targetPos.lat, state.targetPos.lng, state.targetName, false, true, state.targetNote);
     }
-    // 僅在已手動喚醒停車標記時才畫在地圖上
     updateParkingUI();
   }
 
@@ -2005,7 +1995,6 @@
     state.client.on('message', (topic, buf) => {
       const payload = buf.toString();
 
-      // 接收領隊控制與點名廣播
       if (topic === state.controlTopic) {
         if (!payload) return;
         try {
@@ -2034,7 +2023,6 @@
         return;
       }
 
-      // 接收行程清單同步
       if (topic === state.itineraryTopic) {
         if (!payload) return;
         try {
@@ -2057,7 +2045,6 @@
         return;
       }
 
-      // 接收集合點同步
       if (topic === state.targetTopic) {
         if (!payload) {
           clearTargetPos(false);
@@ -2187,7 +2174,7 @@
     $('#mapScreen').classList.remove('hidden');
 
     loadLocalCache();
-    loadPrivateParkingStorage(); // 載入個人專屬本機停車紀錄（平時保持隱藏）
+    loadPrivateParkingStorage();
     updateLockUI();
 
     state.joined = true;
@@ -2253,7 +2240,6 @@
     else $('#itineraryModal').classList.remove('hidden');
   });
 
-  // 領隊管理視窗與點名事件綁定
   $('#leaderPanelBtn').addEventListener('click', () => {
     updateLockUI();
     updateRollcallUI();
@@ -2300,7 +2286,7 @@
     $('#rollcallAlertModal').classList.add('hidden');
   });
 
-  // 行程清單視窗綁定
+  // 行程清單視窗綁定（點擊「＋ 新增站點」直接展開搜尋框，不再預先顯示備註輸入框）
   $('#itineraryToggleBtn').addEventListener('click', () => {
     $('#itineraryModal').classList.remove('hidden');
     updateLockUI();
@@ -2314,7 +2300,7 @@
     if (!canEditGroupData()) return toast('🔒 領隊已鎖定行程編輯');
     const box = $('#addStopBox');
     box.classList.toggle('hidden');
-    if (!box.classList.contains('hidden')) $('#itineraryNoteInput').focus();
+    if (!box.classList.contains('hidden')) $('#itinerarySearchInput').focus();
   });
   $('#itinerarySearchSubmit').addEventListener('click', () => {
     searchItineraryLocation($('#itinerarySearchInput').value);
@@ -2323,7 +2309,6 @@
     if (e.key === 'Enter') searchItineraryLocation($('#itinerarySearchInput').value);
   });
 
-  // 狀態視窗綁定
   $('#statusToggleBtn').addEventListener('click', () => { $('#statusModal').classList.remove('hidden'); });
   $('#myStatusChip').addEventListener('click', () => { $('#statusModal').classList.remove('hidden'); });
   $('#closeStatusModal').addEventListener('click', () => { $('#statusModal').classList.add('hidden'); });
@@ -2344,7 +2329,6 @@
     if (e.key === 'Enter') $('#sendCustomStatusBtn').click();
   });
   
-  // 單一搜尋視窗綁定
   $('#searchToggleBtn').addEventListener('click', () => {
     if (!canEditGroupData()) {
       toast('🔒 領隊已鎖定集合點變更');
