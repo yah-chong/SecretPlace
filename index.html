@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>揪團定位 · 活動代號地圖 (領隊管理 + 個人專屬停車標記 + 智慧地址搜尋與地圖點選版)</title>
+<title>揪團定位 · 活動代號地圖 (SOS 緊急求救音效警報 + 智慧地址搜尋與地圖點選版)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- ================= 質感鮮艷 PWA 網頁圖示與桌面捷徑設定 ================= -->
@@ -106,6 +106,52 @@
 
   #netDot{width:11px;height:11px;border-radius:50%;background:#ff3d00;transition:.3s;flex-shrink:0;}
   #netDot.on{background:#00e676;box-shadow:0 0 8px #00e676}
+
+  /* 🚨 SOS 緊急求救全螢幕警示彈窗 */
+  #sosAlertModal {
+    position: fixed; inset: 0; z-index: 3600;
+    background: rgba(90, 0, 0, 0.92);
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px;
+  }
+  .sos-alert-card {
+    background: #140404; border: 4px solid #ff1744; border-radius: 22px;
+    padding: 26px 20px; max-width: 440px; width: 100%; text-align: center;
+    box-shadow: 0 0 40px rgba(255, 23, 68, 0.9);
+    display: flex; flex-direction: column; gap: 16px;
+    animation: sosCardPulse 0.7s infinite alternate;
+  }
+  .sos-alert-icon {
+    font-size: 56px; line-height: 1;
+  }
+  .sos-alert-title {
+    margin: 0; font-size: 26px; font-weight: 900; color: #ffeb3b; letter-spacing: 1px;
+  }
+  .sos-alert-who {
+    font-size: 22px; font-weight: 900; color: #fff;
+    background: #b71c1c; border: 2px solid #ff8a80; border-radius: 12px;
+    padding: 12px; line-height: 1.4;
+  }
+  .sos-alert-sub {
+    font-size: 16px; color: #ffcdd2; line-height: 1.5; font-weight: bold;
+  }
+  .sos-ack-btn {
+    width: 100%; padding: 18px; border-radius: 14px; border: 3px solid #000;
+    background: #ffeb3b; color: #000; font-size: 21px; font-weight: 900;
+    cursor: pointer; box-shadow: 0 6px 20px rgba(255, 235, 59, 0.5);
+  }
+  .sos-ack-btn:active { transform: scale(0.96); background: #fbc02d; }
+  .sos-locate-btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #ff8a80;
+    background: #2b0a0a; color: #fff; font-size: 18px; font-weight: 900;
+    cursor: pointer;
+  }
+  .sos-locate-btn:active { background: #4a1010; }
+
+  @keyframes sosCardPulse {
+    0% { border-color: #ff1744; box-shadow: 0 0 24px rgba(255, 23, 68, 0.75); }
+    100% { border-color: #ffeb3b; box-shadow: 0 0 44px rgba(255, 235, 59, 0.9); }
+  }
 
   /* 🗺️ 地圖點選新增站點提示橫幅 */
   #mapPickBanner {
@@ -332,7 +378,7 @@
   }
   .rollcall-confirm-btn:active { transform: scale(0.96); }
 
-  /* 💬 快速狀態與短語音留言樣式 */
+  /* 💬 快速狀態按鈕與短語音留言樣式 */
   .quick-status-btn {
     width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #555;
     background: #1c1c1c; color: #fff; font-size: 19px; font-weight: 900;
@@ -606,6 +652,18 @@
     <div class="chip hidden" id="myStatusChip" title="點擊修改目前狀態">💬 <span id="myStatusText"></span></div>
   </div>
 
+  <!-- 🚨 SOS 緊急求救全螢幕警示彈窗（團員確認前持續響鈴與顯示） -->
+  <div id="sosAlertModal" class="hidden">
+    <div class="sos-alert-card">
+      <div class="sos-alert-icon">🚨</div>
+      <h3 class="sos-alert-title">SOS 緊急求救信號！</h3>
+      <div class="sos-alert-who" id="sosAlertWho">同伴發出求救信號</div>
+      <div class="sos-alert-sub" id="sosAlertInfo">正在發出緊急求救警報聲，請立即確認同伴狀況！</div>
+      <button id="sosLocateBtn" class="sos-locate-btn">📍 在地圖上定位該同伴</button>
+      <button id="sosAckCloseBtn" class="sos-ack-btn">🔇 我已確認 / 關閉求救音效</button>
+    </div>
+  </div>
+
   <!-- 🗺️ 地圖點選模式提示橫幅 -->
   <div id="mapPickBanner" class="hidden">
     <div class="map-pick-text">
@@ -675,7 +733,7 @@
     </div>
   </div>
 
-  <!-- 📅 今日行程打卡清單管理滿版視窗 (支援智慧搜尋、地圖選點與決定後再填備註) -->
+  <!-- 📅 今日行程打卡清單管理滿版視窗 -->
   <div id="itineraryModal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
@@ -683,12 +741,10 @@
         <button id="addStopToggleBtn" style="background:#ff9100; color:#000; border:none; padding:10px 14px; border-radius:10px; font-weight:900; font-size:16px; cursor:pointer; white-space:nowrap;">＋ 新增站點</button>
       </div>
 
-      <!-- 鎖定提示橫幅 -->
       <div id="itineraryLockedHint" class="hidden" style="background:#2b1111; border:1.5px solid #ff5252; color:#ff8a80; padding:10px 12px; border-radius:10px; font-size:15px; font-weight:bold;">
         🔒 領隊已開啟「防誤操作鎖定」，目前僅供檢視與導航。
       </div>
 
-      <!-- 搜尋新增站點區塊 (預設收合，決定站點後才詢問時間備註) -->
       <div id="addStopBox" class="hidden" style="background:#181818; padding:12px; border-radius:10px; border-left:5px solid #ffeb3b; display:flex; flex-direction:column; gap:10px;">
         <div style="font-size:16px; color:#ffeb3b; font-weight:900;">搜尋地點、地址或貼上座標：</div>
         <div class="search-input-row">
@@ -699,7 +755,6 @@
         <div id="itinerarySearchResults"></div>
       </div>
 
-      <!-- 行程清單列表 -->
       <div id="itineraryListContainer" class="itinerary-list-container">
         <div style="color:#ccc; font-size:18px; text-align:center; padding:30px 10px;">目前尚無行程站點，請點擊上方「＋ 新增站點」！</div>
       </div>
@@ -838,7 +893,10 @@
     isLocked: false,
     activeRollcallId: null,
     myRollcallAckId: null,
-    isPickingMapForStop: false
+    isPickingMapForStop: false,
+    // 🚨 SOS 求救音效與個人確認狀態
+    sosAlarmActive: false,
+    sosAlertPeerId: null
   };
   const peers = new Map();   
 
@@ -899,12 +957,99 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
-  /* ================= 🔍 智慧地理搜尋核心引擎 (座標解析 + 附近加權 + 自動簡化重試 + 反向地理編碼) ================= */
-  
-  // 1. 解析純經緯度或 Google Maps / Apple Maps 網址內的座標
+  /* ================= 🚨 SOS 緊急求救音效警報引擎 (Web Audio API + 震動) ================= */
+  let audioCtx = null;
+  let sosBeepTimer = null;
+  let sosToneToggle = false;
+
+  function ensureAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioCtx) {
+      audioCtx = new AudioContextClass();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  // 在使用者首次互動時預先解鎖音效引擎，提升 iOS/Android 自動響鈴成功率
+  document.addEventListener('pointerdown', () => {
+    ensureAudioContext();
+  }, { passive: true });
+
+  function playSingleSirenBeep() {
+    if (!state.sosAlarmActive) return;
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      // 雙頻交替急促求救音 (880Hz / 640Hz)
+      const freq = sosToneToggle ? 880 : 640;
+      sosToneToggle = !sosToneToggle;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.45, ctx.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.36);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.38);
+    } catch (e) {}
+
+    if (navigator.vibrate) {
+      try { navigator.vibrate([220, 120, 220]); } catch (e) {}
+    }
+  }
+
+  function triggerSOSAlarmForPeer(peer) {
+    if (!peer) return;
+    state.sosAlarmActive = true;
+    state.sosAlertPeerId = peer.id;
+
+    $('#sosAlertWho').textContent = `🆘 ${peer.nickname} 發出求救信號！`;
+    const distStr = state.myPos ? `目前距離您約 ${fmtDistSimple(haversine(state.myPos, peer))}` : '已更新求救座標';
+    $('#sosAlertInfo').textContent = `${distStr}。求救音效將持續提醒，請確認後點擊下方按鈕關閉個人音效。`;
+    $('#sosAlertModal').classList.remove('hidden');
+
+    if (sosBeepTimer) clearInterval(sosBeepTimer);
+    sosToneToggle = false;
+    playSingleSirenBeep();
+    sosBeepTimer = setInterval(playSingleSirenBeep, 450);
+  }
+
+  function acknowledgeAndStopSOSAlarm() {
+    state.sosAlarmActive = false;
+    if (sosBeepTimer) {
+      clearInterval(sosBeepTimer);
+      sosBeepTimer = null;
+    }
+    if (navigator.vibrate) {
+      try { navigator.vibrate(0); } catch (e) {}
+    }
+    $('#sosAlertModal').classList.add('hidden');
+    toast('🔇 已關閉您手機上的 SOS 求救音效');
+  }
+
+  $('#sosAckCloseBtn').addEventListener('click', acknowledgeAndStopSOSAlarm);
+  $('#sosLocateBtn').addEventListener('click', () => {
+    const targetPeerId = state.sosAlertPeerId;
+    acknowledgeAndStopSOSAlarm();
+    if (targetPeerId && peers.has(targetPeerId)) {
+      focusPeer(targetPeerId);
+    }
+  });
+
+  /* ================= 🔍 智慧地理搜尋核心引擎 ================= */
   function extractCoordinatesFromText(text) {
     const clean = text.trim();
-    // 支援格式: "22.6273, 120.3014" 或 "22.6273 120.3014" 或 Google Maps "@22.6273,120.3014" 或 "q=22.6273,120.3014" 或 "ll=22.6273,120.3014"
     const urlCoordMatch = clean.match(/(?:@|q=|ll=|center=)([-+]?\d{1,2}\.\d+)[,\s]+([-+]?\d{1,3}\.\d+)/);
     if (urlCoordMatch) {
       const lat = parseFloat(urlCoordMatch[1]);
@@ -920,7 +1065,6 @@
     return null;
   }
 
-  // 2. 反向地理編碼：給定座標，抓取附近地標或路名
   async function reverseGeocodeName(lat, lng) {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`, {
@@ -941,24 +1085,18 @@
     };
   }
 
-  // 3. 產生台灣地址簡化備援候選詞 (解決完整地址門牌查不到的問題)
   function buildSimplifiedQueries(rawQuery) {
     const q = rawQuery.trim();
     const candidates = [];
-
-    // 移除「台灣」、「臺灣」與郵遞區號
     let s1 = q.replace(/^(台灣|臺灣|\d{3,6})\s*/g, '').trim();
     if (s1 && s1 !== q) candidates.push(s1);
 
-    // 移除門牌號碼、樓層、巷、弄 (例如 "高雄市鳳山區新甲路123巷45弄6號3樓" -> "高雄市鳳山區新甲路")
     let s2 = s1.replace(/(\d+之?\d*號.*|\d+巷.*|\d+弄.*|\d+樓.*|[一二三四五六七八九十]+段.*)$/g, '').trim();
     if (s2 && s2 !== s1 && s2.length >= 2) candidates.push(s2);
 
-    // 若包含「市/縣」與「區/鄉/鎮」，保留「區/鄉/鎮 + 路名/地標」(去掉最前面的縣市名稱，有時 OSM 縣市合併名稱不同)
     let s3 = s2.replace(/^[^\s市縣]{2,3}[市縣]/, '').trim();
     if (s3 && s3 !== s2 && s3.length >= 2) candidates.push(s3);
 
-    // 若有空格分隔，取最後一組關鍵字 (通常是店名或地標)
     if (q.includes(' ')) {
       const tokens = q.split(/\s+/).filter(Boolean);
       if (tokens.length > 1) {
@@ -966,16 +1104,12 @@
         if (lastToken.length >= 2) candidates.push(lastToken);
       }
     }
-
-    // 去重
     return [...new Set(candidates)];
   }
 
-  // 4. 呼叫 Nominatim 並套用「目前位置附近加權 (viewbox)」
   async function queryNominatimRaw(searchText, limit = 10) {
     let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchText)}&limit=${limit}&addressdetails=1`;
     if (state.myPos) {
-      // 約 0.45 度 (~50公里) 範圍偏重，但不強制 bounded=1 以免搜不到外縣市景點
       const delta = 0.45;
       const left = (state.myPos.lng - delta).toFixed(4);
       const right = (state.myPos.lng + delta).toFixed(4);
@@ -987,12 +1121,10 @@
     return await res.json();
   }
 
-  // 5. 整合型智慧搜尋函式 (支援座標、附近加權排序、查無地址自動簡化重試)
   async function smartSearchPlaces(rawQuery, limit = 10) {
     const trimmed = rawQuery.trim();
     if (!trimmed) return { items: [], fallbackUsed: null };
 
-    // A. 先檢查是否為座標或地圖網址
     const coords = extractCoordinatesFromText(trimmed);
     if (coords) {
       const rev = await reverseGeocodeName(coords.lat, coords.lng);
@@ -1009,11 +1141,9 @@
       };
     }
 
-    // B. 正常搜尋
     let rawData = await queryNominatimRaw(trimmed, limit);
     let fallbackUsed = null;
 
-    // C. 若查無結果，自動啟用簡化關鍵字重試
     if (!rawData || rawData.length === 0) {
       const simplifiedList = buildSimplifiedQueries(trimmed);
       for (const altQuery of simplifiedList) {
@@ -1030,7 +1160,6 @@
       return { items: [], fallbackUsed: null };
     }
 
-    // D. 整理結果並依距離優先排序 (離目前位置越近越前面)
     const mapped = rawData.map(item => {
       const parts = item.display_name.split(',');
       const mainTitle = parts[0].trim();
@@ -1070,7 +1199,6 @@
     toast('正在讀取該位置地標資訊...');
     const rev = await reverseGeocodeName(lat, lng);
 
-    // 讓使用者確認或修改站點名稱
     const customName = prompt(`已在地圖點選位置！\n請確認或修改此站點名稱：`, rev.title);
     if (customName === null) {
       $('#itineraryModal').classList.remove('hidden');
@@ -1078,7 +1206,6 @@
     }
     const finalName = customName.trim() || rev.title;
 
-    // 決定新站點後，才詢問預計時間或備註
     const noteVal = prompt(`已決定站點「${finalName}」。\n請輸入預計到達時間或備註（選填，可直接按確定略過）：`, '');
     if (noteVal === null) {
       $('#itineraryModal').classList.remove('hidden');
@@ -1172,7 +1299,7 @@
     `).join('');
   }
 
-  /* ================= 🧭 智慧導航處理函式 (iOS 彈選單 / Android 直接跳 Google) ================= */
+  /* ================= 🧭 智慧導航處理函式 ================= */
   let pendingNavDest = null;
 
   function checkIsIOS() {
@@ -1437,7 +1564,7 @@
     clearPersonalParking();
   });
 
-  /* ================= 📅 今日行程管理、時間備註、順序調整與一鍵切換 ================= */
+  /* ================= 📅 今日行程管理 ================= */
   function renderItineraryList() {
     const container = $('#itineraryListContainer');
     if (!state.itinerary.length) {
@@ -1602,7 +1729,6 @@
             <span style="color:#ff9100; font-size:16px; font-weight:900; white-space:nowrap;">＋ 加入行程</span>
           </div>
         `;
-        // 決定新站點後，才跳出詢問預計時間或備註
         div.addEventListener('click', () => {
           const noteVal = prompt(`已決定站點「${item.title}」。\n請輸入預計到達時間或備註（選填，可直接按確定略過）：`, '');
           if (noteVal === null) return;
@@ -1735,14 +1861,12 @@
       attribution: '&copy; OpenStreetMap'
     }).addTo(state.map);
 
-    // 支援點擊地圖（在地圖選點新增站點模式下）
     state.map.on('click', function(e) {
       if (state.isPickingMapForStop) {
         handleMapPickedLocation(e.latlng.lat, e.latlng.lng);
       }
     });
 
-    // 長按地圖設定集合點
     state.map.on('contextmenu', function(e) {
       if (state.isPickingMapForStop) return;
       if (!canEditGroupData()) {
@@ -1818,7 +1942,7 @@
     state.line = null;
   }
 
-  /* ================= 搜尋地點設定集合點 (同步套用智慧搜尋) ================= */
+  /* ================= 搜尋地點設定集合點 ================= */
   async function searchLocation(query) {
     if (!query.trim()) return toast('請輸入要搜尋的地點名稱、地址或座標');
     const resultsEl = $('#searchResults');
@@ -1976,7 +2100,7 @@
     }
   }
 
-  /* ================= 同伴與 SOS 管理 ================= */
+  /* ================= 同伴與 SOS 求救觸發管理 ================= */
   function upsertPeer(m) {
     let p = peers.get(m.id);
     const wasSOS = p ? p.isSOS : false;
@@ -2013,8 +2137,11 @@
       }
     }
 
+    // 偵測到新發出的 SOS 求救信號：啟動畫面求救警示與緊急求救音效（直到本機團員確認關閉）
     if (!wasSOS && p.isSOS) {
-      toast('🚨 警告：' + p.nickname + ' 發出了 SOS 求救訊號！', 8000);
+      triggerSOSAlarmForPeer(p);
+    } else if (state.sosAlarmActive && state.sosAlertPeerId === p.id && state.myPos) {
+      $('#sosAlertInfo').textContent = `目前距離您約 ${fmtDistSimple(haversine(state.myPos, p))}。求救音效將持續提醒，請確認後點擊下方按鈕關閉個人音效。`;
     }
 
     const isLowBatNow = (p.bat != null && p.bat <= 20 && !p.chg);
@@ -2168,6 +2295,7 @@
   };
 
   function toggleSOS() {
+    ensureAudioContext();
     state.isSOS = !state.isSOS;
     const btn = $('#sosBtn');
     if (state.isSOS) {
@@ -2385,6 +2513,7 @@
 
   /* ================= 加入 / 離開 ================= */
   function join() {
+    ensureAudioContext();
     const code = $('#codeInput').value.trim();
     const nick = $('#nickInput').value.trim();
     const isLeader = $('#leaderCheckbox').checked;
@@ -2439,6 +2568,7 @@
 
   function leave() {
     if (!confirm('確定要離開這個活動嗎？')) return;
+    acknowledgeAndStopSOSAlarm();
     
     if (state.wakeLock !== null) {
       state.wakeLock.release().catch(() => {});
@@ -2524,7 +2654,6 @@
     $('#rollcallAlertModal').classList.add('hidden');
   });
 
-  // 行程清單與地圖點選事件綁定
   $('#itineraryToggleBtn').addEventListener('click', () => {
     $('#itineraryModal').classList.remove('hidden');
     updateLockUI();
