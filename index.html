@@ -121,20 +121,14 @@
     display: flex; flex-direction: column; gap: 16px;
     animation: sosCardPulse 0.7s infinite alternate;
   }
-  .sos-alert-icon {
-    font-size: 56px; line-height: 1;
-  }
-  .sos-alert-title {
-    margin: 0; font-size: 26px; font-weight: 900; color: #ffeb3b; letter-spacing: 1px;
-  }
+  .sos-alert-icon { font-size: 56px; line-height: 1; }
+  .sos-alert-title { margin: 0; font-size: 26px; font-weight: 900; color: #ffeb3b; letter-spacing: 1px; }
   .sos-alert-who {
     font-size: 22px; font-weight: 900; color: #fff;
     background: #b71c1c; border: 2px solid #ff8a80; border-radius: 12px;
     padding: 12px; line-height: 1.4;
   }
-  .sos-alert-sub {
-    font-size: 16px; color: #ffcdd2; line-height: 1.5; font-weight: bold;
-  }
+  .sos-alert-sub { font-size: 16px; color: #ffcdd2; line-height: 1.5; font-weight: bold; }
   .sos-ack-btn {
     width: 100%; padding: 18px; border-radius: 14px; border: 3px solid #000;
     background: #ffeb3b; color: #000; font-size: 21px; font-weight: 900;
@@ -161,16 +155,57 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     box-shadow: 0 8px 28px rgba(0,0,0,0.9);
   }
-  .map-pick-text {
-    font-size: 17px; font-weight: 900; color: #00e676; line-height: 1.4;
-  }
-  .map-pick-sub {
-    font-size: 14px; color: #eee; font-weight: normal; display: block; margin-top: 2px;
-  }
+  .map-pick-text { font-size: 17px; font-weight: 900; color: #00e676; line-height: 1.4; }
+  .map-pick-sub { font-size: 14px; color: #eee; font-weight: normal; display: block; margin-top: 2px; }
   #cancelMapPickBtn {
     background: #ff1744; color: #fff; border: none; padding: 10px 14px;
     border-radius: 10px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
+
+  /* 📍 地圖點選後「附近重要景點／商家下拉選單」確認彈窗 */
+  #mapPoiPickerModal {
+    position: fixed; inset: 0; z-index: 3300; background: rgba(0,0,0,0.82);
+    display: flex; align-items: center; justify-content: center; padding: 14px;
+  }
+  .poi-picker-card {
+    background: #14171f; border: 2.5px solid #00e676; border-radius: 18px;
+    padding: 18px 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.95);
+  }
+  .poi-coord-bar {
+    background: #0b0e14; border: 1px solid #334155; border-radius: 10px;
+    padding: 9px 12px; font-size: 14px; color: #7dd3fc; font-weight: bold;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  }
+  .poi-action-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .poi-pill-btn {
+    background: #1e293b; color: #ffeb3b; border: 1.5px solid #64748b;
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; font-weight: 900; cursor: pointer;
+  }
+  .poi-pill-btn.emerald { background: #064e3b; color: #6ee7b7; border-color: #10b981; }
+  .poi-pill-btn:active { transform: scale(0.96); }
+  .poi-select {
+    width: 100%; padding: 14px 12px; border-radius: 12px;
+    border: 2.5px solid #ffeb3b; background: #0f172a; color: #ffeb3b;
+    font-size: 17px; font-weight: 900; outline: none;
+  }
+  .poi-input-label { font-size: 15px; font-weight: 900; color: #e2e8f0; margin-bottom: 4px; display: block; }
+  .poi-text-input {
+    width: 100%; padding: 13px; border-radius: 10px;
+    border: 2px solid #475569; background: #0b0e14; color: #fff;
+    font-size: 18px; font-weight: bold; outline: none;
+  }
+  .poi-text-input:focus { border-color: #00e676; }
+  .poi-btn-row { display: flex; gap: 10px; margin-top: 4px; }
+  .poi-cancel-btn {
+    flex: 1; padding: 14px; border-radius: 12px; border: 2px solid #64748b;
+    background: #1e293b; color: #cbd5e1; font-size: 17px; font-weight: 900; cursor: pointer;
+  }
+  .poi-confirm-btn {
+    flex: 1.5; padding: 14px; border-radius: 12px; border: none;
+    background: #00e676; color: #000; font-size: 18px; font-weight: 900; cursor: pointer;
+  }
+  .poi-confirm-btn:active { transform: scale(0.97); }
 
   /* 🔍 右側控制按鈕組 */
   .control-group {
@@ -286,13 +321,8 @@
     background: #181818; border-left: 6px solid #555; border-radius: 10px;
     padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
   }
-  .itinerary-item.active-stop {
-    border-left-color: #ff9100; background: #261b08;
-  }
-  .itinerary-title {
-    color: #ffffff; font-size: 20px; font-weight: 900; line-height: 1.4;
-    word-break: break-word;
-  }
+  .itinerary-item.active-stop { border-left-color: #ff9100; background: #261b08; }
+  .itinerary-title { color: #ffffff; font-size: 20px; font-weight: 900; line-height: 1.4; word-break: break-word; }
   .itinerary-note-badge {
     display: inline-block; background: #2a2410; color: #ffeb3b; border: 1px solid #ffb300;
     font-size: 15px; font-weight: bold; padding: 4px 10px; border-radius: 8px;
@@ -306,35 +336,26 @@
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
     margin-top: 2px;
   }
-  .itinerary-dist {
-    color: #00e676; font-size: 16px; font-weight: 900;
-  }
-  .itinerary-actions {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  }
+  .itinerary-dist { color: #00e676; font-size: 16px; font-weight: 900; }
+  .itinerary-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .itinerary-move-btn {
     background: #2b2b2b; color: #ffeb3b; border: 1.5px solid #666;
     padding: 8px 10px; border-radius: 8px; font-size: 15px; font-weight: 900;
     cursor: pointer; line-height: 1;
   }
-  .itinerary-move-btn:disabled {
-    opacity: 0.28; color: #888; border-color: #444; cursor: not-allowed;
-  }
+  .itinerary-move-btn:disabled { opacity: 0.28; color: #888; border-color: #444; cursor: not-allowed; }
   .itinerary-move-btn:not(:disabled):active { background: #444; }
-
   .itinerary-edit-btn {
     background: #1f2a38; color: #82b1ff; border: 1.5px solid #448aff;
     padding: 8px 10px; border-radius: 8px; font-size: 15px; font-weight: 900;
     cursor: pointer; white-space: nowrap;
   }
   .itinerary-edit-btn:active { background: #2c3e50; }
-
   .itinerary-set-btn {
     background: #00e676; color: #000; border: none; padding: 9px 13px; border-radius: 8px;
     font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
   .itinerary-set-btn:active { background: #00c853; transform: scale(0.96); }
-
   .itinerary-del-btn {
     background: #3a1212; color: #ff6e6e; border: 1.5px solid #ff5252; padding: 8px 10px; border-radius: 8px;
     font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap;
@@ -346,9 +367,7 @@
     background: #181818; border: 2px solid #ffb300; border-radius: 14px; padding: 15px;
     display: flex; flex-direction: column; gap: 10px;
   }
-  .leader-switch-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  }
+  .leader-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .rollcall-status-card {
     background: #141e26; border: 2px solid #2979ff; border-radius: 12px; padding: 12px;
     display: flex; flex-direction: column; gap: 8px;
@@ -426,21 +445,12 @@
   #targetBanner { border: 2.5px solid #ff9100; }
   #parkingBanner { border: 2.5px solid #448aff; background: rgba(10, 22, 38, 0.96); }
 
-  .floating-banner .t-info { 
-    flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
-  }
-  .floating-banner .t-title-row {
-    font-size: 16px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .floating-banner .t-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .floating-banner .t-title-row { font-size: 16px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #targetBanner .t-title-row { color: #ffab40; }
   #parkingBanner .t-title-row { color: #82b1ff; }
-
-  .floating-banner .t-note-row {
-    font-size: 14px; font-weight: bold; color: #ffeb3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .floating-banner .t-walk-row {
-    font-size: 14px; font-weight: 900; color: #00e676; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .floating-banner .t-note-row { font-size: 14px; font-weight: bold; color: #ffeb3b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .floating-banner .t-walk-row { font-size: 14px; font-weight: 900; color: #00e676; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   
   .target-banner-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   .floating-banner .t-btn {
@@ -452,7 +462,6 @@
     background: #2b3545; color: #cfd8dc; border: 1px solid #607d8b; padding: 8px 10px;
     border-radius: 10px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
   }
-
   .floating-banner .t-clear {
     background: #ff1744; color: #fff; border: none; padding: 8px 11px;
     border-radius: 10px; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap;
@@ -474,9 +483,7 @@
     transform: translateY(20px); transition: transform .2s ease;
   }
   #navPickerModal.show .nav-picker-card { transform: translateY(0); }
-  .nav-picker-title {
-    color: #fff; font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 4px;
-  }
+  .nav-picker-title { color: #fff; font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 4px; }
   .nav-option-btn {
     width: 100%; padding: 16px; border-radius: 14px; border: 2px solid #555;
     background: #222; color: #fff; font-size: 19px; font-weight: 900;
@@ -509,11 +516,7 @@
   }
   .panel-head:active{opacity:0.7;}
   
-  #peerList{
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    max-height: 36vh;
-  }
+  #peerList{ overflow-y: auto; -webkit-overflow-scrolling: touch; max-height: 36vh; }
   
   .peer{
     display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
@@ -571,10 +574,7 @@
   .pin.offline .dot { background:#888!important; border-color:#ccc; }
   .pin.offline .name { background:#333; color:#ffcc80; border-color:#ff9100; }
 
-  .target-pin {
-    font-size: 34px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
-    transform: translate(-50%, -100%);
-  }
+  .target-pin { font-size: 34px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transform: translate(-50%, -100%); }
   .parking-pin {
     background: #1565c0; color: #fff; border: 3px solid #fff; border-radius: 12px;
     width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
@@ -652,7 +652,7 @@
     <div class="chip hidden" id="myStatusChip" title="點擊修改目前狀態">💬 <span id="myStatusText"></span></div>
   </div>
 
-  <!-- 🚨 SOS 緊急求救全螢幕警示彈窗（團員確認前持續響鈴與顯示） -->
+  <!-- 🚨 SOS 緊急求救全螢幕警示彈窗 -->
   <div id="sosAlertModal" class="hidden">
     <div class="sos-alert-card">
       <div class="sos-alert-icon">🚨</div>
@@ -668,9 +668,49 @@
   <div id="mapPickBanner" class="hidden">
     <div class="map-pick-text">
       👆 請直接點擊地圖選擇新站點位置
-      <span class="map-pick-sub">點選後將自動帶入地點並詢問時間與備註</span>
+      <span class="map-pick-sub">點選後將秒搜附近重要景點／商家供選取</span>
     </div>
     <button id="cancelMapPickBtn">取消選點</button>
+  </div>
+
+  <!-- 📍 地圖點選後：附近重要景點／商家下拉選單 + 自行命名確認視窗 -->
+  <div id="mapPoiPickerModal" class="hidden">
+    <div class="poi-picker-card">
+      <h3 style="margin:0; color:#00e676; font-size:21px; font-weight:900;">📍 新增行程站點：確認位置與名稱</h3>
+      <div class="poi-coord-bar">
+        <span id="pickedCoordText">GPS 座標：--</span>
+        <div class="poi-action-pills">
+          <button type="button" id="poiDeepBtn" class="poi-pill-btn emerald">✨ 補抓小店</button>
+          <button type="button" id="poiWidenBtn" class="poi-pill-btn">🔍 擴大 1000m</button>
+        </div>
+      </div>
+
+      <div id="poiSearchStatus" style="font-size:14px; color:#cbd5e1; line-height:1.45;">
+        正在秒搜附近重要景點、車站與商家...
+      </div>
+
+      <div>
+        <label for="mapNearbyPoiSelect" class="poi-input-label">🧭 附近重要景點／車站／商家下拉選單：</label>
+        <select id="mapNearbyPoiSelect" class="poi-select">
+          <option value="">▼ 搜尋中，請稍候...</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="mapStopNameInput" class="poi-input-label">🏷️ 站點名稱（未選下拉選單時可直接用此座標輸入名稱）：</label>
+        <input id="mapStopNameInput" type="text" class="poi-text-input" placeholder="輸入或確認站點名稱..." autocomplete="off">
+      </div>
+
+      <div>
+        <label for="mapStopNoteInput" class="poi-input-label">🕒 預計時間或備註（選填）：</label>
+        <input id="mapStopNoteInput" type="text" class="poi-text-input" placeholder="例如：10:30 集合 / 停留 1 小時" autocomplete="off">
+      </div>
+
+      <div class="poi-btn-row">
+        <button type="button" id="mapPoiCancelBtn" class="poi-cancel-btn">取消</button>
+        <button type="button" id="mapPoiConfirmBtn" class="poi-confirm-btn">＋ 加入行程</button>
+      </div>
+    </div>
   </div>
 
   <!-- 👑 領隊專屬管理面板滿版視窗 -->
@@ -865,6 +905,21 @@
   const OFFLINE_MS = 60 * 1000;
   const PRIVATE_PARKING_KEY = 'geoact_private_parking_v1';
 
+  const OSM_CATEGORY_ZH = {
+    attraction: "景點", viewpoint: "觀景台", museum: "博物館", theme_park: "樂園",
+    zoo: "動物園", aquarium: "水族館", gallery: "美術館", artwork: "地標藝術",
+    information: "遊客中心", hotel: "飯店", guest_house: "民宿", camp_site: "露營區",
+    monument: "紀念碑", memorial: "紀念館", castle: "城堡/古蹟", ruins: "遺跡",
+    archaeological_site: "古蹟", wayside_shrine: "神社/祠堂", park: "公園",
+    garden: "花園", nature_reserve: "保護區", playground: "遊憩區",
+    station: "車站", halt: "車站", tram_stop: "電車站", subway_entrance: "地鐵站",
+    ferry_terminal: "碼頭", restaurant: "餐廳", cafe: "咖啡廳", fast_food: "小吃/速食",
+    food_court: "美食街", ice_cream: "冰品", place_of_worship: "寺廟/神社",
+    marketplace: "市場", supermarket: "超市", convenience: "超商", bakery: "烘焙坊",
+    souvenir: "伴手禮", gift: "禮品店", mall: "購物中心", department_store: "百貨",
+    tea: "茶行/茶飲", coffee: "咖啡店"
+  };
+
   const state = {
     id: 'u' + Math.random().toString(36).slice(2, 10),
     code: '', nickname: '', color: COLORS[0],
@@ -894,7 +949,8 @@
     activeRollcallId: null,
     myRollcallAckId: null,
     isPickingMapForStop: false,
-    // 🚨 SOS 求救音效與個人確認狀態
+    pickedMapCoord: null,
+    poiSearchToken: 0,
     sosAlarmActive: false,
     sosAlertPeerId: null
   };
@@ -923,6 +979,11 @@
     const s = Math.sin(dLat / 2) ** 2 +
               Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(s));
+  }
+  function formatCategoryLabel(rawTag) {
+    if (!rawTag) return "地標";
+    const key = String(rawTag).toLowerCase();
+    return OSM_CATEGORY_ZH[key] || rawTag;
   }
 
   function fmtDistSimple(m) {
@@ -957,7 +1018,7 @@
     return Math.floor(m / 60) + ' 小時前';
   }
 
-  /* ================= 🚨 SOS 緊急求救音效警報引擎 (Web Audio API + 震動) ================= */
+  /* ================= 🚨 SOS 緊急求救音效警報引擎 ================= */
   let audioCtx = null;
   let sosBeepTimer = null;
   let sosToneToggle = false;
@@ -965,19 +1026,12 @@
   function ensureAudioContext() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return null;
-    if (!audioCtx) {
-      audioCtx = new AudioContextClass();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
     return audioCtx;
   }
 
-  // 在使用者首次互動時預先解鎖音效引擎，提升 iOS/Android 自動響鈴成功率
-  document.addEventListener('pointerdown', () => {
-    ensureAudioContext();
-  }, { passive: true });
+  document.addEventListener('pointerdown', () => { ensureAudioContext(); }, { passive: true });
 
   function playSingleSirenBeep() {
     if (!state.sosAlarmActive) return;
@@ -988,7 +1042,6 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
-      // 雙頻交替急促求救音 (880Hz / 640Hz)
       const freq = sosToneToggle ? 880 : 640;
       sosToneToggle = !sosToneToggle;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
@@ -999,7 +1052,6 @@
 
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.38);
     } catch (e) {}
@@ -1083,6 +1135,198 @@
       title: `指定座標 (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
       sub: `緯度 ${lat.toFixed(5)}, 經度 ${lng.toFixed(5)}`
     };
+  }
+
+  // 第一層：Photon 輕量免費地標秒搜（重要景點／車站／商家）
+  async function fetchPhotonNearby(lat, lng, maxDistMeters = 500) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3800);
+    try {
+      const url = `https://photon.komoot.io/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&limit=18&radius=1`;
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const features = Array.isArray(data?.features) ? data.features : [];
+      const results = [];
+
+      for (const f of features) {
+        const props = f.properties || {};
+        const name = (props.name || '').trim();
+        if (!name) continue;
+
+        const type = props.type || '';
+        if (type === 'street' || type === 'city' || type === 'district' || type === 'county' || type === 'state' || type === 'country') {
+          continue;
+        }
+
+        const coords = f.geometry?.coordinates;
+        let distMeters = null;
+        if (Array.isArray(coords) && coords.length >= 2) {
+          distMeters = Math.round(haversine({ lat, lng }, { lat: coords[1], lng: coords[0] }));
+        }
+        if (distMeters !== null && distMeters > maxDistMeters) continue;
+
+        const rawCat = props.osm_value || props.osm_key || '地標';
+        results.push({
+          name,
+          category: formatCategoryLabel(rawCat),
+          dist: distMeters ?? 999
+        });
+      }
+      return results;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      return [];
+    }
+  }
+
+  // 第二層：Overpass 精簡重點備援（重要景點／車站／餐飲／主要商店）
+  async function fetchOverpassFocused(radiusMeters, lat, lng) {
+    const endpoints = [
+      { name: 'Overpass DE', url: 'https://overpass-api.de/api/interpreter' },
+      { name: 'Overpass Kumi', url: 'https://overpass.kumi.systems/api/interpreter' },
+      { name: 'Overpass VK', url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter' }
+    ];
+
+    const query = `[out:json][timeout:5];(nwr(around:${radiusMeters},${lat},${lng})["name"]["tourism"];nwr(around:${radiusMeters},${lat},${lng})["name"]["historic"];nwr(around:${radiusMeters},${lat},${lng})["name"]["railway"~"station|halt|tram_stop|subway_entrance"];nwr(around:${radiusMeters},${lat},${lng})["name"]["amenity"~"restaurant|cafe|fast_food|food_court|place_of_worship|marketplace|ferry_terminal"];nwr(around:${radiusMeters},${lat},${lng})["name"]["shop"~"supermarket|convenience|bakery|souvenir|gift|mall|department_store|tea|coffee"];nwr(around:${radiusMeters},${lat},${lng})["name"]["leisure"~"park|garden|nature_reserve"];);out center 30;`;
+
+    for (const ep of endpoints) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4200);
+      try {
+        const res = await fetch(ep.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: 'data=' + encodeURIComponent(query),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        const elements = Array.isArray(data?.elements) ? data.elements : [];
+        const results = [];
+
+        for (const el of elements) {
+          const tags = el.tags || {};
+          const rawName = (tags['name:zh-Hant'] || tags['name:zh'] || tags.name || '').trim();
+          if (!rawName) continue;
+
+          const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
+          const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
+          const distMeters = (typeof pLat === 'number' && typeof pLng === 'number')
+            ? Math.round(haversine({ lat, lng }, { lat: pLat, lng: pLng }))
+            : null;
+
+          if (distMeters !== null && distMeters > radiusMeters + 50) continue;
+
+          const rawCat = tags.tourism || tags.historic || tags.railway || tags.amenity || tags.shop || tags.leisure || '景點';
+          results.push({
+            name: rawName,
+            category: formatCategoryLabel(rawCat),
+            dist: distMeters ?? 999
+          });
+        }
+        return { items: results, sourceName: ep.name, ok: true };
+      } catch (err) {
+        clearTimeout(timeoutId);
+      }
+    }
+    return { items: [], sourceName: 'Overpass', ok: false };
+  }
+
+  function mergeAndDedupeNearbyPlaces(listA, listB) {
+    const mapByName = new Map();
+    [...listA, ...listB].forEach(item => {
+      const key = item.name.toLowerCase();
+      if (!mapByName.has(key)) {
+        mapByName.set(key, { ...item });
+      } else {
+        const prev = mapByName.get(key);
+        if (item.dist < prev.dist) prev.dist = item.dist;
+      }
+    });
+    return Array.from(mapByName.values()).sort((a, b) => a.dist - b.dist).slice(0, 25);
+  }
+
+  // 地圖點選後混合雙引擎搜尋（先 Photon 秒抓，不足或按深度補抓時呼叫精簡 Overpass）
+  async function searchNearbyForMapPick(lat, lng, radiusMeters = 350, forceDeepOverpass = false) {
+    const token = ++state.poiSearchToken;
+    const selectEl = $('#mapNearbyPoiSelect');
+    const statusEl = $('#poiSearchStatus');
+    const nameInput = $('#mapStopNameInput');
+
+    $('#pickedCoordText').textContent = `GPS 座標：${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    selectEl.innerHTML = `<option value="">▼ 正在秒搜附近重要景點／商家...</option>`;
+    statusEl.innerHTML = `<span style="color:#ffeb3b; font-weight:bold;">⚡ 正在秒搜周邊重要景點、車站與商家...</span>`;
+
+    const photonItems = await fetchPhotonNearby(lat, lng, Math.max(radiusMeters, 500));
+    if (token !== state.poiSearchToken) return;
+
+    let combined = mergeAndDedupeNearbyPlaces(photonItems, []);
+    let usedSources = photonItems.length > 0 ? ['Photon 秒搜'] : [];
+    let overpassBusy = false;
+
+    if (forceDeepOverpass || combined.length < 3) {
+      statusEl.innerHTML = `<span style="color:#7dd3fc; font-weight:bold;">🔍 ${combined.length > 0 ? `已抓到 ${combined.length} 筆，` : ''}正補抓 ${radiusMeters}m 內詳細景點與店家...</span>`;
+      const ovRes = await fetchOverpassFocused(radiusMeters, lat, lng);
+      if (token !== state.poiSearchToken) return;
+
+      if (ovRes.ok) {
+        combined = mergeAndDedupeNearbyPlaces(combined, ovRes.items);
+        if (ovRes.items.length > 0) usedSources.push(ovRes.sourceName);
+      } else {
+        overpassBusy = true;
+      }
+    }
+
+    let fallbackPlaceName = '';
+    if (combined.length === 0) {
+      const rev = await reverseGeocodeName(lat, lng);
+      if (token !== state.poiSearchToken) return;
+      fallbackPlaceName = rev.title;
+    }
+
+    // 建構下拉選單：先提供附近地點選擇；若都不選，可直接用下方名稱框以 GPS 座標命名
+    selectEl.innerHTML = '';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.text = combined.length > 0
+      ? `▼ 附近 ${combined.length} 處重要景點／商家（可點此選取）`
+      : `▼ 附近無地標清單，可直接使用下方名稱或自訂`;
+    selectEl.add(defaultOpt);
+
+    combined.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.name;
+      const distText = item.dist < 999 ? `約 ${item.dist}m` : '附近';
+      opt.text = `📍 ${item.name}（${distText}・${item.category}）`;
+      selectEl.add(opt);
+    });
+
+    const customOpt = document.createElement('option');
+    customOpt.value = '__CUSTOM__';
+    customOpt.text = '✍️ 不選清單，直接用此 GPS 位置自行輸入名稱';
+    selectEl.add(customOpt);
+
+    if (combined.length > 0) {
+      // 預設不強制覆寫，若名稱欄空白則填入最近地標方便參考，使用者仍可隨時改選或直接輸入
+      if (!nameInput.value.trim()) {
+        nameInput.value = combined[0].name;
+      }
+      const srcText = usedSources.join(' + ');
+      const busyHint = overpassBusy ? '（細節伺服器忙碌，已快速完成）' : '';
+      statusEl.innerHTML = `<span style="color:#00e676; font-weight:bold;">✅ 已找出 ${combined.length} 筆附近地點</span>（${esc(srcText)}）${busyHint}。可從下拉選單切換，或直接改寫下方名稱。`;
+    } else {
+      if (!nameInput.value.trim() && fallbackPlaceName) {
+        nameInput.value = fallbackPlaceName;
+      }
+      statusEl.innerHTML = `<span style="color:#ffeb3b; font-weight:bold;">ℹ️ ${radiusMeters}m 內無獨立地標</span>，已帶入座標位置，您可直接輸入站點名稱或按「🔍 擴大 1000m」。`;
+    }
   }
 
   function buildSimplifiedQueries(rawQuery) {
@@ -1194,27 +1438,62 @@
     $('#mapPickBanner').classList.add('hidden');
   }
 
-  async function handleMapPickedLocation(lat, lng) {
+  function handleMapPickedLocation(lat, lng) {
     stopMapPickMode();
-    toast('正在讀取該位置地標資訊...');
-    const rev = await reverseGeocodeName(lat, lng);
-
-    const customName = prompt(`已在地圖點選位置！\n請確認或修改此站點名稱：`, rev.title);
-    if (customName === null) {
-      $('#itineraryModal').classList.remove('hidden');
-      return;
-    }
-    const finalName = customName.trim() || rev.title;
-
-    const noteVal = prompt(`已決定站點「${finalName}」。\n請輸入預計到達時間或備註（選填，可直接按確定略過）：`, '');
-    if (noteVal === null) {
-      $('#itineraryModal').classList.remove('hidden');
-      return;
-    }
-
-    addItineraryStop(finalName, lat, lng, noteVal);
-    $('#itineraryModal').classList.remove('hidden');
+    state.pickedMapCoord = { lat, lng };
+    $('#mapStopNameInput').value = '';
+    $('#mapStopNoteInput').value = '';
+    $('#mapPoiPickerModal').classList.remove('hidden');
+    searchNearbyForMapPick(lat, lng, 350, false);
   }
+
+  $('#mapNearbyPoiSelect').addEventListener('change', () => {
+    const val = $('#mapNearbyPoiSelect').value;
+    const nameInput = $('#mapStopNameInput');
+    if (!val) return;
+    if (val === '__CUSTOM__') {
+      nameInput.value = '';
+      nameInput.focus();
+      return;
+    }
+    nameInput.value = val;
+  });
+
+  $('#poiDeepBtn').addEventListener('click', () => {
+    if (!state.pickedMapCoord) return;
+    searchNearbyForMapPick(state.pickedMapCoord.lat, state.pickedMapCoord.lng, 350, true);
+  });
+
+  $('#poiWidenBtn').addEventListener('click', () => {
+    if (!state.pickedMapCoord) return;
+    searchNearbyForMapPick(state.pickedMapCoord.lat, state.pickedMapCoord.lng, 1000, true);
+  });
+
+  $('#mapPoiCancelBtn').addEventListener('click', () => {
+    state.pickedMapCoord = null;
+    $('#mapPoiPickerModal').classList.add('hidden');
+    $('#itineraryModal').classList.remove('hidden');
+  });
+
+  $('#mapPoiConfirmBtn').addEventListener('click', () => {
+    if (!state.pickedMapCoord) return;
+    const selectVal = $('#mapNearbyPoiSelect').value;
+    const typedName = $('#mapStopNameInput').value.trim();
+    const noteVal = $('#mapStopNoteInput').value.trim();
+
+    let finalName = typedName;
+    if (!finalName && selectVal && selectVal !== '__CUSTOM__') {
+      finalName = selectVal;
+    }
+    if (!finalName) {
+      finalName = `自訂地點 (${state.pickedMapCoord.lat.toFixed(4)}, ${state.pickedMapCoord.lng.toFixed(4)})`;
+    }
+
+    addItineraryStop(finalName, state.pickedMapCoord.lat, state.pickedMapCoord.lng, noteVal);
+    state.pickedMapCoord = null;
+    $('#mapPoiPickerModal').classList.add('hidden');
+    $('#itineraryModal').classList.remove('hidden');
+  });
 
   /* ================= 👑 領隊權限檢查與 UI 更新 ================= */
   function canEditGroupData() {
@@ -1701,7 +1980,7 @@
         resultsEl.innerHTML = `
           <div style="color:#ff8a80; font-size:16px; text-align:center; padding:12px; line-height:1.6;">
             找不到「${esc(query)}」的相關位置。<br>
-            <span style="color:#ccc; font-size:14px;">建議改搜「附近地標/店名」，或直接點擊上方「🗺️ 在地圖上直接點選位置」！</span>
+            <span style="color:#ccc; font-size:14px;">建議改搜「附近地標/店名」，或直接點擊上方「🗺️ 地址找不到？直接在地圖上點選位置」！</span>
           </div>`;
         return;
       }
@@ -2137,7 +2416,6 @@
       }
     }
 
-    // 偵測到新發出的 SOS 求救信號：啟動畫面求救警示與緊急求救音效（直到本機團員確認關閉）
     if (!wasSOS && p.isSOS) {
       triggerSOSAlarmForPeer(p);
     } else if (state.sosAlarmActive && state.sosAlertPeerId === p.id && state.myPos) {
