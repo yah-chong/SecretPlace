@@ -841,7 +841,7 @@
     </div>
   </div>
 
-  <!-- 集合點 & 個人專屬停車位置膠囊橫條區 -->
+  <!-- 集合點 & 停車位置膠囊橫條區 -->
   <div id="bannersContainer">
     <div id="parkingBanner" class="floating-banner hidden" title="點擊重新對焦停車位置">
       <div class="t-info" id="focusParkingArea">
@@ -936,31 +936,36 @@
     toilets: "公廁", parking: "停車場"
   };
 
-  const SUPPLY_CONFIG = {
+  /* ================= 升級版補給雷達設定（Nominatim 邊界框 + 擴充關鍵字 + 嚴格近距） ================= */
+  const UPGRADED_SUPPLY_CONFIG = {
     fuel: {
       label: '⛽ 加油站',
-      radii: [2500, 6000, 12000],
-      minDesired: 4,
-      overpassFilter: 'nwr(around:RADIUS,LAT,LNG)["amenity"~"fuel|charging_station"];nwr(around:RADIUS,LAT,LNG)["shop"="fuel"];',
-      keywords: ['加油站', '中油', '台塑']
+      strictMaxMeters: 4000,
+      radii: [1500, 3500, 7000],
+      minDesired: 5,
+      overpassFilter: 'nwr(around:RADIUS,LAT,LNG)["amenity"="fuel"];nwr(around:RADIUS,LAT,LNG)["shop"="fuel"];',
+      keywords: ['加油站', '中油', '台塑', '全國', '台亞', '山隆', '加油']
     },
     food: {
       label: '🍜 餐廳／小吃',
-      radii: [1500, 3500, 6500],
-      minDesired: 6,
+      strictMaxMeters: 2500,
+      radii: [800, 1600, 2500],
+      minDesired: 8,
       overpassFilter: 'nwr(around:RADIUS,LAT,LNG)["name"]["amenity"~"restaurant|cafe|fast_food|food_court|ice_cream"];',
-      keywords: ['餐廳', '小吃', '餐館']
+      keywords: ['小吃', '餐廳', '便當', '麵', '牛肉麵', '滷肉飯', '早餐', '咖啡', '飲料']
     },
     store: {
       label: '🏪 超商／廁所',
-      radii: [1500, 3500, 7000],
-      minDesired: 5,
+      strictMaxMeters: 2500,
+      radii: [800, 1800, 2500],
+      minDesired: 6,
       overpassFilter: 'nwr(around:RADIUS,LAT,LNG)["shop"~"convenience|supermarket"];nwr(around:RADIUS,LAT,LNG)["amenity"="toilets"];',
-      keywords: ['7-11', '全家', '超商']
+      keywords: ['7-11', '全家', '超商', '超市', '萊爾富', 'OK']
     },
     parking: {
       label: '🅿️ 停車場',
-      radii: [1200, 3000, 6000],
+      strictMaxMeters: 2500,
+      radii: [600, 1500, 2500],
       minDesired: 5,
       overpassFilter: 'nwr(around:RADIUS,LAT,LNG)["amenity"="parking"];',
       keywords: ['停車場', '停車', 'parking']
@@ -1151,7 +1156,7 @@
     }
   });
 
-  /* ================= 智慧地理搜尋與一鍵補給引擎 ================= */
+  /* ================= 智慧地理搜尋與升級版補給引擎 ================= */
   function extractCoordinatesFromText(text) {
     const clean = text.trim();
     const urlCoordMatch = clean.match(/(?:@|q=|ll=|center=)([-+]?\d{1,2}\.\d+)[,\s]+([-+]?\d{1,3}\.\d+)/);
@@ -1187,6 +1192,255 @@
       title: `指定座標 (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
       sub: `緯度 ${lat.toFixed(5)}, 經度 ${lng.toFixed(5)}`
     };
+  }
+
+  function buildLatLngBBox(lat, lng, radiusMeters) {
+    const latDelta = radiusMeters / 111320;
+    const cosLat = Math.max(0.2, Math.cos(lat * Math.PI / 180));
+    const lngDelta = radiusMeters / (111320 * cosLat);
+    return {
+      minLat: lat - latDelta,
+      maxLat: lat + latDelta,
+      minLng: lng - lngDelta,
+      maxLng: lng + lngDelta
+    };
+  }
+
+  async function queryNominatimBoundedKeywords(cfg, radiusMeters, lat, lng) {
+    const box = buildLatLngBBox(lat, lng, radiusMeters);
+    const viewbox = `${box.minLng.toFixed(5)},${box.maxLat.toFixed(5)},${box.maxLng.toFixed(5)},${box.minLat.toFixed(5)}`;
+    const subsetKeywords = cfg.keywords.slice(0, 5);
+    const items = [];
+
+    await Promise.all(subsetKeywords.map(async (kw) => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 3200);
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(kw)}&viewbox=${encodeURIComponent(viewbox)}&bounded=1&limit=8&addressdetails=1`;
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'zh-Hant' },
+          signal: controller.signal
+        });
+        clearTimeout(tid);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+
+        for (const row of data) {
+          const pLat = parseFloat(row.lat);
+          const pLng = parseFloat(row.lon);
+          if (Number.isNaN(pLat) || Number.isNaN(pLng)) continue;
+
+          const distM = haversine({ lat, lng }, { lat: pLat, lng: pLng });
+          if (distM > radiusMeters) continue;
+
+          const parts = (row.display_name || '').split(',').map(s => s.trim()).filter(Boolean);
+          const title = (row.name || parts[0] || kw).trim();
+          const subParts = parts.slice(1, 3).filter(Boolean);
+
+          items.push({
+            title,
+            sub: subParts.length ? `${cfg.label} · ${subParts.join(' ')}` : `${cfg.label} · 範圍內地點`,
+            lat: pLat,
+            lng: pLng,
+            distM
+          });
+        }
+      } catch (e) {
+        clearTimeout(tid);
+      }
+    }));
+
+    return items;
+  }
+
+  async function queryOverpassSupplyFast(cfg, radiusMeters, lat, lng) {
+    const endpoints = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter'
+    ];
+    const bodyClause = cfg.overpassFilter
+      .replace(/RADIUS/g, String(radiusMeters))
+      .replace(/LAT/g, String(lat))
+      .replace(/LNG/g, String(lng));
+    const query = `[out:json][timeout:4];(${bodyClause});out center 50;`;
+
+    for (const epUrl of endpoints) {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 3200);
+      try {
+        const res = await fetch(epUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: 'data=' + encodeURIComponent(query),
+          signal: controller.signal
+        });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const els = Array.isArray(data?.elements) ? data.elements : [];
+        const items = [];
+
+        for (const el of els) {
+          const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
+          const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
+          if (typeof pLat !== 'number' || typeof pLng !== 'number') continue;
+
+          const distM = haversine({ lat, lng }, { lat: pLat, lng: pLng });
+          if (distM > radiusMeters) continue;
+
+          const tags = el.tags || {};
+          const rawCat = tags.amenity || tags.shop || cfg.label;
+          const catLabel = formatCategoryLabel(rawCat);
+          const brand = tags.brand || tags.operator || '';
+          const rawName = (tags['name:zh-Hant'] || tags['name:zh'] || tags.name || brand || `${catLabel} (${pLat.toFixed(4)}, ${pLng.toFixed(4)})`).trim();
+          const road = tags['addr:street'] || tags['addr:road'] || tags['addr:suburb'] || '';
+
+          items.push({
+            title: rawName,
+            sub: road ? `${catLabel} · ${road}` : `${catLabel} · 座標 ${pLat.toFixed(4)}, ${pLng.toFixed(4)}`,
+            lat: pLat,
+            lng: pLng,
+            distM
+          });
+        }
+        return items;
+      } catch (e) {
+        clearTimeout(tid);
+      }
+    }
+    return [];
+  }
+
+  async function queryPhotonSupplyFast(cfg, radiusMeters, lat, lng) {
+    const subsetKeywords = cfg.keywords.slice(0, 5);
+    const items = [];
+
+    await Promise.all(subsetKeywords.map(async (kw) => {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 2800);
+      try {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(kw)}&lat=${lat}&lon=${lng}&limit=10`;
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(tid);
+        if (!res.ok) return;
+        const data = await res.json();
+        const feats = Array.isArray(data?.features) ? data.features : [];
+
+        for (const f of feats) {
+          const coords = f.geometry?.coordinates;
+          const props = f.properties || {};
+          const title = (props.name || '').trim();
+          if (!title || !Array.isArray(coords) || coords.length < 2) continue;
+
+          const pLat = coords[1], pLng = coords[0];
+          const distM = haversine({ lat, lng }, { lat: pLat, lng: pLng });
+          if (distM > radiusMeters) continue;
+
+          const locHint = [props.city, props.district, props.street].filter(Boolean).join(' ');
+          items.push({
+            title,
+            sub: locHint ? `${cfg.label} · ${locHint}` : cfg.label,
+            lat: pLat,
+            lng: pLng,
+            distM
+          });
+        }
+      } catch (e) {
+        clearTimeout(tid);
+      }
+    }));
+
+    return items;
+  }
+
+  function dedupeAndFilterByMaxDist(rawList, maxDistMeters, maxLimit = 18) {
+    const uniqueMap = new Map();
+    for (const it of rawList) {
+      if (typeof it.distM !== 'number' || it.distM > maxDistMeters) continue;
+      const key = `${it.title.trim().toLowerCase()}_${it.lat.toFixed(3)}_${it.lng.toFixed(3)}`;
+      if (!uniqueMap.has(key) || it.distM < uniqueMap.get(key).distM) {
+        uniqueMap.set(key, it);
+      }
+    }
+    return Array.from(uniqueMap.values())
+      .sort((a, b) => a.distM - b.distM)
+      .slice(0, maxLimit);
+  }
+
+  async function searchSupplyUpgraded(supplyKey, options = {}) {
+    const cfg = UPGRADED_SUPPLY_CONFIG[supplyKey];
+    if (!cfg) return;
+    if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再試');
+
+    const resultsEl = $('#searchResults');
+    const { lat, lng } = state.myPos;
+    const strictMax = options.maxMeters || cfg.strictMaxMeters;
+    const radiiToTry = options.customRadii || cfg.radii.filter(r => r <= strictMax);
+    if (!radiiToTry.length) radiiToTry.push(strictMax);
+
+    resultsEl.innerHTML = `<div style="color:#ffeb3b;font-size:17px;text-align:center;padding:16px;">⚡ 正在以邊界框與多來源比對附近 ${esc(cfg.label)}（上限 ${fmtDistSimple(strictMax)}）...</div>`;
+
+    let collected = [];
+
+    for (const r of radiiToTry) {
+      const [nomItems, ovItems, phItems] = await Promise.all([
+        queryNominatimBoundedKeywords(cfg, r, lat, lng),
+        queryOverpassSupplyFast(cfg, r, lat, lng),
+        queryPhotonSupplyFast(cfg, r, lat, lng)
+      ]);
+      collected = dedupeAndFilterByMaxDist([...collected, ...nomItems, ...ovItems, ...phItems], strictMax, 20);
+      if (collected.length >= cfg.minDesired) break;
+    }
+
+    resultsEl.innerHTML = '';
+    if (!collected.length) {
+      const nextCap = Math.round(strictMax * 1.8);
+      resultsEl.innerHTML = `
+        <div style="color:#ff8a80;font-size:17px;text-align:center;padding:18px;line-height:1.6;">
+          ${fmtDistSimple(strictMax)} 內查無「${esc(cfg.label)}」<br>
+          <span style="color:#ccc;font-size:14px;">為避免顯示過遠地點，已套用嚴格距離上限。</span><br><br>
+          <button type="button" class="widen-supply-btn" id="expandFromEmptyBtn">🔍 放寬至 ${fmtDistSimple(nextCap)} 內再找</button>
+        </div>`;
+      resultsEl.querySelector('#expandFromEmptyBtn')?.addEventListener('click', () => {
+        searchSupplyUpgraded(supplyKey, {
+          maxMeters: nextCap,
+          customRadii: [strictMax, nextCap]
+        });
+      });
+      return;
+    }
+
+    const nearestDistText = fmtDistSimple(collected[0].distM);
+    const tighterMeters = Math.max(800, Math.round(strictMax * 0.6));
+    const widerMeters = Math.round(strictMax * 1.8);
+
+    const headerNotice = document.createElement('div');
+    headerNotice.className = 'search-fallback-notice';
+    headerNotice.innerHTML = `
+      <div>${esc(cfg.label)}（${fmtDistSimple(strictMax)} 內共 ${collected.length} 筆，最近 <b>${nearestDistText}</b>）</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" class="widen-supply-btn" id="tighterSupplyBtn">🎯 限 ${fmtDistSimple(tighterMeters)}</button>
+        <button type="button" class="widen-supply-btn" id="widenSupplyBtn">🔍 放寬 ${fmtDistSimple(widerMeters)}</button>
+      </div>
+    `;
+    resultsEl.appendChild(headerNotice);
+
+    headerNotice.querySelector('#tighterSupplyBtn')?.addEventListener('click', () => {
+      searchSupplyUpgraded(supplyKey, {
+        maxMeters: tighterMeters,
+        customRadii: [tighterMeters]
+      });
+    });
+
+    headerNotice.querySelector('#widenSupplyBtn')?.addEventListener('click', () => {
+      searchSupplyUpgraded(supplyKey, {
+        maxMeters: widerMeters,
+        customRadii: [strictMax, widerMeters]
+      });
+    });
+
+    renderPlaceResultCards(resultsEl, collected);
   }
 
   async function fetchPhotonNearby(lat, lng, maxDistMeters = 500) {
@@ -1272,160 +1526,6 @@
       }
     }
     return { items: [], sourceName: 'Overpass', ok: false };
-  }
-
-  async function queryOverpassSupplyRadius(cfg, radiusMeters, lat, lng) {
-    const endpoints = [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
-    ];
-    const bodyClause = cfg.overpassFilter
-      .replace(/RADIUS/g, String(radiusMeters))
-      .replace(/LAT/g, String(lat))
-      .replace(/LNG/g, String(lng));
-    const query = `[out:json][timeout:6];(${bodyClause});out center 60;`;
-
-    for (const epUrl of endpoints) {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 4500);
-      try {
-        const res = await fetch(epUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-          body: 'data=' + encodeURIComponent(query),
-          signal: controller.signal
-        });
-        clearTimeout(tid);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const els = Array.isArray(data?.elements) ? data.elements : [];
-        const items = [];
-
-        for (const el of els) {
-          const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
-          const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
-          if (typeof pLat !== 'number' || typeof pLng !== 'number') continue;
-
-          const tags = el.tags || {};
-          const rawCat = tags.amenity || tags.shop || cfg.label;
-          const catLabel = formatCategoryLabel(rawCat);
-          const brand = tags.brand || tags.operator || '';
-          const rawName = (tags['name:zh-Hant'] || tags['name:zh'] || tags.name || brand || `${catLabel} (${pLat.toFixed(4)}, ${pLng.toFixed(4)})`).trim();
-          const road = tags['addr:street'] || tags['addr:road'] || tags['addr:suburb'] || '';
-          const distM = haversine({ lat, lng }, { lat: pLat, lng: pLng });
-
-          items.push({
-            title: rawName,
-            sub: road ? `${catLabel} · ${road}` : `${catLabel} · 座標 ${pLat.toFixed(4)}, ${pLng.toFixed(4)}`,
-            lat: pLat,
-            lng: pLng,
-            distM
-          });
-        }
-        return items;
-      } catch (e) {
-        clearTimeout(tid);
-      }
-    }
-    return [];
-  }
-
-  async function queryPhotonSupplyKeywords(cfg, maxRadiusMeters, lat, lng) {
-    const items = [];
-    for (const kw of cfg.keywords) {
-      try {
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(kw)}&lat=${lat}&lon=${lng}&limit=12`;
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const feats = Array.isArray(data?.features) ? data.features : [];
-        for (const f of feats) {
-          const coords = f.geometry?.coordinates;
-          const props = f.properties || {};
-          const title = (props.name || '').trim();
-          if (!title || !Array.isArray(coords) || coords.length < 2) continue;
-          const pLat = coords[1], pLng = coords[0];
-          const distM = haversine({ lat, lng }, { lat: pLat, lng: pLng });
-          if (distM > maxRadiusMeters) continue;
-          const locHint = [props.city, props.district, props.street].filter(Boolean).join(' ');
-          items.push({
-            title,
-            sub: locHint ? `${cfg.label} · ${locHint}` : cfg.label,
-            lat: pLat,
-            lng: pLng,
-            distM
-          });
-        }
-      } catch (e) {}
-    }
-    return items;
-  }
-
-  function dedupeAndSortByDist(rawList, maxLimit = 15) {
-    const uniqueMap = new Map();
-    rawList.forEach(it => {
-      const k = `${it.title.toLowerCase()}_${it.lat.toFixed(3)}_${it.lng.toFixed(3)}`;
-      if (!uniqueMap.has(k) || it.distM < uniqueMap.get(k).distM) {
-        uniqueMap.set(k, it);
-      }
-    });
-    return Array.from(uniqueMap.values()).sort((a, b) => a.distM - b.distM).slice(0, maxLimit);
-  }
-
-  async function searchSupplyNearby(supplyKey, forcedStartRadius = null) {
-    const cfg = SUPPLY_CONFIG[supplyKey];
-    if (!cfg) return;
-    if (!state.myPos) return toast('尚未取得 GPS 定位，請稍候再試');
-
-    const resultsEl = $('#searchResults');
-    const { lat, lng } = state.myPos;
-    const radiiList = forcedStartRadius ? [forcedStartRadius] : cfg.radii;
-
-    resultsEl.innerHTML = `<div style="color:#ffeb3b;font-size:17px;text-align:center;padding:16px;">⚡ 正在搜尋附近最近的 ${esc(cfg.label)}...</div>`;
-
-    let collected = [];
-    let activeRadius = radiiList[0];
-
-    for (const r of radiiList) {
-      activeRadius = r;
-      const [ovItems, phItems] = await Promise.all([
-        queryOverpassSupplyRadius(cfg, r, lat, lng),
-        queryPhotonSupplyKeywords(cfg, r, lat, lng)
-      ]);
-      collected = dedupeAndSortByDist([...collected, ...ovItems, ...phItems], 20);
-      if (collected.length >= cfg.minDesired) break;
-    }
-
-    if (collected.length === 0) {
-      const fallbackPh = await queryPhotonSupplyKeywords(cfg, 30000, lat, lng);
-      collected = dedupeAndSortByDist(fallbackPh, 15);
-    }
-
-    resultsEl.innerHTML = '';
-    if (!collected.length) {
-      resultsEl.innerHTML = `<div style="color:#ff8a80;font-size:17px;text-align:center;padding:18px;line-height:1.6;">
-        附近暫無標記的「${esc(cfg.label)}」<br>
-        <span style="color:#ccc;font-size:14px;">建議改在上方輸入店名或關鍵字搜尋。</span>
-      </div>`;
-      return;
-    }
-
-    const nearestDistText = fmtDistSimple(collected[0].distM);
-    const nextWidenRadius = activeRadius * 2;
-    const headerNotice = document.createElement('div');
-    headerNotice.className = 'search-fallback-notice';
-    headerNotice.innerHTML = `
-      <div>${esc(cfg.label)}（${(activeRadius / 1000).toFixed(1)}km 內共 ${collected.length} 筆，最近 <b>${nearestDistText}</b>）</div>
-      <button type="button" class="widen-supply-btn" id="widenSupplyBtn">🔍 搜 ${(nextWidenRadius / 1000).toFixed(0)}km</button>
-    `;
-    resultsEl.appendChild(headerNotice);
-
-    headerNotice.querySelector('#widenSupplyBtn')?.addEventListener('click', () => {
-      searchSupplyNearby(supplyKey, nextWidenRadius);
-    });
-
-    renderPlaceResultCards(resultsEl, collected);
   }
 
   function mergeAndDedupeNearbyPlaces(listA, listB) {
@@ -3112,7 +3212,7 @@
   });
 
   document.querySelectorAll('.supply-btn').forEach(btn => {
-    btn.addEventListener('click', () => searchSupplyNearby(btn.getAttribute('data-supply')));
+    btn.addEventListener('click', () => searchSupplyUpgraded(btn.getAttribute('data-supply')));
   });
 
   $('#searchToggleBtn').addEventListener('click', () => {
